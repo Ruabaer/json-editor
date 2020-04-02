@@ -1,3 +1,4 @@
+// checkbox.js ¡ý
 JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     this.value = !!value;
@@ -26,7 +27,14 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
     if(this.options.compact) this.container.className += ' compact';
 
     this.input = this.theme.getCheckbox();
-    this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    // this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    switch(this.schema.format){
+      case 'switch':
+      this.control = this.theme.getSwitchFormControl(this.label, this.input, this.description,this);
+      break;
+      default:
+      this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    }
 
     if(this.schema.readOnly || this.schema.readonly) {
       this.always_disabled = true;
@@ -37,6 +45,10 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
       e.preventDefault();
       e.stopPropagation();
       self.value = this.checked;
+      // Ìí¼Ó ¡ý
+      if(self.value) this.setAttribute('data-switch','on');
+      else this.setAttribute('data-switch','off');
+      // Ìí¼Ó ¡ü
       self.onChange(true);
     });
 
@@ -59,3 +71,4 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
     this._super();
   }
 });
+// checkbox.js ¡ü

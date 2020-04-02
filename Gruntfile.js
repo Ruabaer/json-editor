@@ -31,6 +31,12 @@ module.exports = function(grunt) {
           'src/editors/string.js',
           'src/editors/number.js',
           'src/editors/integer.js',
+          'src/editors/rating.js',
+          'src/editors/colorpicker.js',
+          'src/editors/checkboxradio.js',
+          'src/editors/jpicker.js',
+          'src/editors/minicolor.js',
+          'src/editors/acedit.js',
           'src/editors/object.js',
           'src/editors/array.js',
           'src/editors/table.js',
@@ -123,7 +129,13 @@ module.exports = function(grunt) {
       ],
       afterconcat: {
         options: {
-          undef: true
+          undef: true,
+          globals: {
+            jQuery: false,
+            define: false,
+            module: false,
+            require: false
+          },
         },
         files: {
           src: ['dist/jsoneditor.js']

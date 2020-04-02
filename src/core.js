@@ -1,3 +1,4 @@
+// core.js ↓
 var JSONEditor = function(element,options) {
   if (!(element instanceof Element)) {
     throw new Error('element should be an instance of Element');
@@ -149,10 +150,25 @@ JSONEditor.prototype = {
     
     return this;
   },
+  /*
   trigger: function(event) {
     if(this.callbacks && this.callbacks[event] && this.callbacks[event].length) {
       for(var i=0; i<this.callbacks[event].length; i++) {
         this.callbacks[event][i]();
+      }
+    }
+
+    return this;
+  },
+  */
+  trigger: function() {
+    var key = Array.prototype.shift.call(arguments);
+    if(this.callbacks && this.callbacks[key] && this.callbacks[key].length) {
+      var fns = this.callbacks[key];
+      for(var i=0; i<fns.length; i++) {
+        var fn=fns[i];
+        if(arguments.length) fn.apply(this, arguments);
+        // this.callbacks[event][i]();
       }
     }
     
@@ -194,7 +210,37 @@ JSONEditor.prototype = {
     options = $extend({},editor_class.options||{},options);
     return new editor_class(options);
   },
+  /*
   onChange: function() {
+    if(!this.ready) return;
+
+    if(this.firing_change) return;
+    this.firing_change = true;
+
+    var self = this;
+
+    window.requestAnimationFrame(function() {
+      self.firing_change = false;
+      if(!self.ready) return;
+
+      // Validate and cache results
+      self.validation_results = self.validator.validate(self.root.getValue());
+
+      if(self.options.show_errors !== "never") {
+        self.root.showValidationErrors(self.validation_results);
+      }
+      else {
+        self.root.showValidationErrors([]);
+      }
+
+      // Fire change event
+      self.trigger('change');
+    });
+
+    return this;
+  },
+  */
+  onChange: function(newVal,key,path) {
     if(!this.ready) return;
     
     if(this.firing_change) return;
@@ -215,11 +261,13 @@ JSONEditor.prototype = {
       else {
         self.root.showValidationErrors([]);
       }
-      
-      // Fire change event
-      self.trigger('change');
     });
-    
+    // Fire change event
+    if(newVal === undefined) {
+      return;
+    }
+    this.trigger('change',newVal,key,path);
+
     return this;
   },
   compileTemplate: function(template, name) {
@@ -594,3 +642,4 @@ JSONEditor.defaults = {
   resolvers: [],
   custom_validators: []
 };
+// core.js ↑

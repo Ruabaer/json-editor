@@ -1,3 +1,4 @@
+// defaults.js ↓
 // Set the default theme
 JSONEditor.defaults.theme = 'html';
 
@@ -219,7 +220,32 @@ JSONEditor.plugins = {
     
   },
   selectize: {
-  }
+  },
+  colorpicker:{},
+  checkboxradio:{},
+    minicolor:{
+        animationSpeed: 50,
+        animationEasing: 'swing',
+        change: null,
+        changeDelay: 0,
+        control: 'hux',
+        defaultValue: '#ff6161',
+        format: 'hex',
+        hide: null,
+        hideSpeed: 300,
+        inline: false,
+        keywords: 'transparent',
+        letterCase: 'lowercase',
+        opacity: false,
+        position: 'bottom left',
+        show: null,
+        showSpeed: 300,
+        theme: 'bootstrap',
+        swatches: [
+            '#ef9a9a','#90caf9','#a5d6a7','#fff59d','#ffcc80','#bcaaa4','transparent'
+        ],
+
+    }
 };
 
 // Default per-editor options
@@ -246,7 +272,8 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
 JSONEditor.defaults.resolvers.unshift(function(schema) {
   if(schema.type === 'boolean') {
     // If explicitly set to 'checkbox', use that
-    if(schema.format === "checkbox" || (schema.options && schema.options.checkbox)) {
+    // if(schema.format === "checkbox" || (schema.options && schema.options.checkbox)) {
+    if (schema.format === "checkbox" || schema.format === "switch" || (schema.options && schema.options.checkbox)) {
       return "checkbox";
     }
     // Otherwise, default to select menu
@@ -278,6 +305,34 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
     return "table";
   }
 });
+//第三步：添加解析器
+//扩展
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if (schema.type === 'integer' && schema.format === "rating") return "rating";
+});
+//颜色
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if (schema.type === 'string' && schema.format === "colorpicker") return "colorpicker";
+});
+
+//jQueryui-checkboxradio
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&& schema.format==="checkboxradio") return "checkboxradio";
+});
+
+//jpicker
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&&schema.format==="jpicker") return "jpicker";
+});
+//minicolor
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&&schema.format==="minicolor") return "minicolor";
+});
+//ace代码编辑器
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&&schema.format==='acedit') return "acedit";
+});
+
 // Use the `select` editor for dynamic enumSource enums
 JSONEditor.defaults.resolvers.unshift(function(schema) {
   if(schema.enumSource) return (JSONEditor.plugins.selectize.enable) ? 'selectize' : 'select';
@@ -311,3 +366,4 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
   // If this schema uses `oneOf` or `anyOf`
   if(schema.oneOf || schema.anyOf) return "multiple";
 });
+// defaults.js ↑

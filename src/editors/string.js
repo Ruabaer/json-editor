@@ -1,3 +1,4 @@
+// string.js ↓
 JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
   register: function() {
     this._super();
@@ -252,7 +253,8 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
 
     if(this.format) this.input.setAttribute('data-schemaformat',this.format);
 
-    this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    // this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
     this.container.appendChild(this.control);
 
     // Any special formatting that needs to happen after the input is added to the dom
@@ -272,17 +274,40 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     else {
       this.refreshValue();
     }
+    //设置初始状态
+    this.initstatus(this.label);
+    //监听checkbox
+    this.checkListener();
+  },
+  initstatus:function (label) {//初始化状态 是否禁用
+    if(this.schema.disable===false) {
+        this.input.disabled=true;
+        this.theme.disableLabel(label);
+        this.control.firstElementChild.checked=false;
+    }else {
+        this.control.firstElementChild.checked=true;
+    }
   },
   enable: function() {
     if(!this.always_disabled) {
       this.input.disabled = false;
       // TODO: WYSIWYG and Markdown editors
+      if(this.label) this.theme.enableLabel(this.label);
+      this.value=this.input.value;
     }
+    this.refreshValue();
+    this.onChange(true);
     this._super();
   },
   disable: function() {
     this.input.disabled = true;
     // TODO: WYSIWYG and Markdown editors
+    if(this.label) this.theme.disableLabel(this.label);
+    this.value=null;
+
+    //此处为了禁用后input中仍显示之前的值，所以不进行refresh
+
+    this.onChange(true);
     this._super();
   },
   afterInputReady: function() {
@@ -362,9 +387,10 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
         // The theme
         if(JSONEditor.plugins.ace.theme) this.ace_editor.setTheme('ace/theme/'+JSONEditor.plugins.ace.theme);
         // The mode
-        mode = window.ace.require("ace/mode/"+mode);
-        if(mode) this.ace_editor.getSession().setMode(new mode.Mode());
-        
+        this.ace_editor.getSession().setMode('ace/mode/'+mode);
+        // mode = window.ace.require("ace/mode/"+mode);
+        // if(mode) this.ace_editor.getSession().setMode(new mode.Mode());
+
         // Listen for changes
         this.ace_editor.on('change',function() {
           var val = self.ace_editor.getValue();
@@ -444,5 +470,20 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     else {
       this.theme.removeInputError(this.input);
     }
+  },
+  //checkbox点击监听
+  checkListener: function () {
+      var self = this;
+      var checkboxes = self.control.firstElementChild;
+      checkboxes.addEventListener('change', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (this.checked) {
+              self.enable();
+          } else {
+              self.disable();
+          }
+      });
   }
 });
+// string.js ↑

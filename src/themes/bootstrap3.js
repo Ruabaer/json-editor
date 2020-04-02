@@ -1,3 +1,4 @@
+// bootstrap3.js ↓
 JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
   getSelectInput: function(options) {
     var el = this._super(options);
@@ -58,10 +59,72 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
 
     return group;
   },
+  //  自定义布局带checkbox
+  getFormControlB3: function (label, input, description, self) {
+    var group = document.createElement('div');
+    var uuid = self.theme.GenNonDuplicateID();
+
+    if (label && input.type === 'checkbox') {
+        group.className += ' checkbox';
+        label.appendChild(input);
+        group.style.marginTop = '0';
+        group.appendChild(label);
+        input.style.position = 'relative';
+        input.style.cssFloat = 'left';
+    }
+    else {
+        var ck = self.theme.getCheckbox();
+        group.className += ' form-group';
+        if (label) {
+            ck.id = uuid;
+            label.setAttribute('for', uuid);
+            label.className += ' control-label';
+            label.style.lineHeight = 2;
+            label.style.cursor = 'pointer';
+            label.style.userSelect = 'none';
+            group.appendChild(ck);
+            group.appendChild(label);
+        }
+        group.appendChild(input);
+    }
+
+    if (description) group.appendChild(description);
+
+    return group;
+},
+//自定义布局无checkbox 无label 数组颜色专用
+getFormControlB3Array: function (label, input, description, self) {
+  var group = document.createElement('div');
+
+  group.className += ' form-group';
+  // group.style.marginBottom = 0;
+  if (label) {
+    label.className += ' control-label';
+        label.style.lineHeight = 2;
+        label.style.cursor = 'pointer';
+        label.style.userSelect = 'none';
+        label.style.display = 'none';
+        group.appendChild(label);
+  }
+  group.appendChild(input);
+
+  if (description) group.appendChild(description);
+
+    return group;
+},
   getIndentedPanel: function() {
     var el = document.createElement('div');
     el.className = 'well well-sm';
     el.style.paddingBottom = 0;
+    return el;
+  },
+  //颜色组panel
+  getIndentedPanelArray: function () {
+    var el = document.createElement('div');
+    el.className = ' arraycolor';
+    el.style.width = '28px';
+    el.style.height='28px';
+    el.style.marginRight = '5px';
     return el;
   },
   getFormInputDescription: function(text) {
@@ -83,6 +146,8 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
   getButton: function(text, icon, title) {
     var el = this._super(text, icon, title);
     el.className += 'btn btn-default';
+    el.style.backgroundColor='transparent';
+        el.style.border='none';
     return el;
   },
   getTable: function() {
@@ -118,10 +183,23 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
     el.className = 'rows';
     return el;
   },
+  getHTabHolder: function () {
+    var el = document.createElement('div');
+    el.innerHTML = "<div class='tabs list-group col-md-12 clearpad'></div><div class='col-md-12 well well-sm clearpad'></div>";
+    el.className = 'rows';
+    return el;
+  },
   getTab: function(text) {
     var el = document.createElement('a');
     el.className = 'list-group-item';
     el.setAttribute('href','#');
+    el.appendChild(text);
+    return el;
+  },
+  getHTab: function (text) {
+    var el = document.createElement('a');
+    el.className = 'list-group-item col-md-6';
+    el.setAttribute('href', '#');
     el.appendChild(text);
     return el;
   },
@@ -167,3 +245,4 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
     bar.innerHTML = '';
   }
 });
+// bootstrap3.js ↑

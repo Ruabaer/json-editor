@@ -1,3 +1,4 @@
+// editor.js ↓
 /**
  * All editors should extend from this class
  */
@@ -6,16 +7,28 @@ JSONEditor.AbstractEditor = Class.extend({
     this.onChange(true);
   },
   notify: function() {
+    if(!this.jsoneditor){
+      return;
+    }
     this.jsoneditor.notifyWatchers(this.path);
   },
+  /*
   change: function() {
     if(this.parent) this.parent.onChildEditorChange(this);
     else this.jsoneditor.onChange();
   },
+  */
+  change: function (newVal,key,path) {
+    if (this.parent) {
+        this.jsoneditor.onChange(newVal,key,path);
+        this.parent.onChildEditorChange(this);
+    }
+  },
   onChange: function(bubble) {
     this.notify();
     if(this.watch_listener) this.watch_listener();
-    if(bubble) this.change();
+    // if(bubble) this.change();
+    if (bubble) this.change(this.value,this.key,this.path);
   },
   register: function() {
     this.jsoneditor.registerEditor(this);
@@ -361,8 +374,11 @@ JSONEditor.AbstractEditor = Class.extend({
     this.parent = null;
   },
   getDefault: function() {
+    if (!this.schema.disable) {
     if(this.schema["default"]) return this.schema["default"];
     if(this.schema["enum"]) return this.schema["enum"][0];
+      if (this.schema.format=="minicolor") return JSONEditor.plugins.minicolor.defaultValue;
+    }
     
     var type = this.schema.type || this.schema.oneOf;
     if(type && Array.isArray(type)) type = type[0];

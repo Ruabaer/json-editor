@@ -171,7 +171,20 @@ JSONEditor.AbstractTheme = Class.extend({
     el.className = 'form-control';
     if(label) el.appendChild(label);
     if(input.type === 'checkbox') {
-      label.insertBefore(input,label.firstChild);
+      // label.insertBefore(input,label.firstChild);
+      var uuid=this.GenNonDuplicateID();
+      input.id=uuid;
+      el.className = 'form-control linkbtn';
+      label.setAttribute('for',uuid);
+      label.style.width='220px';
+      label.style.height='20px';
+      label.style.backgroundColor='#27363d';
+      label.style.cursor='pointer';
+      label.style.textAlign='center';
+      label.style.color='#fff';
+      label.style.userSelect='none';
+      input.style.display='none';
+      el.insertBefore(input, el.firstChild);
     }
     else {
       el.appendChild(input);
@@ -220,8 +233,8 @@ JSONEditor.AbstractTheme = Class.extend({
       button.appendChild(icon);
       button.innerHTML += ' ';
     }
-    button.appendChild(document.createTextNode(text));
-    if(title) button.setAttribute('title',title);
+    // button.appendChild(document.createTextNode(text));
+    // if(title) button.setAttribute('title',title);
   },
   getTable: function() {
     return document.createElement('table');
@@ -345,5 +358,34 @@ JSONEditor.AbstractTheme = Class.extend({
   createImageLink: function(holder,link,image) {
     holder.appendChild(link);
     link.appendChild(image);
+  },
+  GenNonDuplicateID: function () {
+      var s = [];
+      var hexDigits = "0123456789abcdef";
+      for (var i = 0; i < 36; i++) {
+          s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+      }
+      s[14] = "4"; // bits 12-15 of the time_hi_and_version field to 0010
+      s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); // bits 6-7 of the clock_seq_hi_and_reserved to 01
+      s[8] = s[13] = s[18] = s[23] = "-";
+
+      var uuid = s.join("");
+      return uuid;
+  },
+  getStyles: function (ele, styles) {//自定义内联样式函数
+      if (styles) {
+          if (ele.nodeName == 'H3') {
+              for (var i in styles.title) {
+                  ele.style[i] = styles.title[i];
+              }
+          }
+
+          if (ele.nodeName == 'DIV') {
+              for (var j in styles.border) {
+                  ele.style[j] = styles.border[j];
+              }
+          }
+
+      }
   }
 });

@@ -1,3 +1,4 @@
+// object.js ↓
 JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return $extend({},this.schema["default"] || {});
@@ -331,6 +332,9 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       this.editjson_holder.appendChild(this.editjson_cancel);
 
       // Manage Properties modal
+      // 添加 ↓
+      this.theme.getStyles(this.title, this.schema.styles);
+      // 添加↑
       this.addproperty_holder = this.theme.getModal();
       this.addproperty_list = document.createElement('div');
       this.addproperty_list.style.width = '295px';
@@ -383,6 +387,10 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       // Container for child editor area
       this.editor_holder = this.theme.getIndentedPanel();
       this.container.appendChild(this.editor_holder);
+      // 添加 ↓
+      this.theme.getStyles(this.editor_holder, this.schema.styles);
+      // 添加 ↑
+      //子元素的行容器
 
       // Container for rows of child editors
       this.row_container = this.theme.getGridContainer();
@@ -697,8 +705,14 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     var result = this._super();
     if(this.jsoneditor.options.remove_empty_properties || this.options.remove_empty_properties) {
       for(var i in result) {
+        /*
         if(result.hasOwnProperty(i)) {
           if(!result[i]) delete result[i];
+        }
+        */
+        //对boolean型进行分离 不进行删除操作
+        if (result.hasOwnProperty(i) &&this.schema.properties.hasOwnProperty(i) &&this.schema.properties[i].hasOwnProperty('type') && this.schema.properties[i].type != 'boolean') {
+          if (!result[i]) delete result[i];
         }
       }
     }
@@ -712,7 +726,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       if(!this.editors.hasOwnProperty(i)) continue;
       this.value[i] = this.editors[i].getValue();
     }
-    
+
     if(this.adding_property) this.refreshAddProperties();
   },
   refreshAddProperties: function() {
@@ -884,3 +898,4 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     });
   }
 });
+// object.js ↑

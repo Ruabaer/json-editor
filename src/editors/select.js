@@ -1,3 +1,4 @@
+// select.js ↓
 JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     value = this.typecast(value||'');
@@ -173,10 +174,15 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       self.onInputChange();
     });
 
-    this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    // this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
     this.container.appendChild(this.control);
 
-    this.value = this.enum_values[0];
+    // this.value = this.enum_values[0];
+    //设置初始状态
+    this.initstatus(this.label);
+    //监听checkbox
+    this.checkListener();
   },
   onInputChange: function() {
     var val = this.input.value;
@@ -332,13 +338,31 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   enable: function() {
     if(!this.always_disabled) {
       this.input.disabled = false;
+      // 添加 ↓
+      if(this.label) this.theme.enableLabel(this.label);
+      if(this.schema.type=='boolean'){
+        this.value=this.input.selectedIndex==1?'true':'';
+      }else {
+        this.value=this.input.value;
+      }
+      // 添加 ↑
       if(this.select2) this.select2.select2("enable",true);
     }
+    // 添加 ↓
+    this.refreshValue();
+    this.onChange(true);
+    // 添加 ↑
     this._super();
   },
   disable: function() {
     this.input.disabled = true;
+    // 添加 ↓
+    this.value=null;
+    if(this.label) this.theme.disableLabel(this.label);
+    // 添加 ↑
     if(this.select2) this.select2.select2("enable",false);
+    this.refreshValue();
+    this.onChange(true);
     this._super();
   },
   destroy: function() {
@@ -351,5 +375,36 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     }
 
     this._super();
+  },
+  initstatus: function (label) {//初始化状态 是否禁用
+      if (this.schema.disable) {
+          this.input.disabled = true;
+          this.theme.disableLabel(label);
+          if(this.control.firstElementChild.type=='checkbox'){
+              this.control.firstElementChild.checked = false;
+          }
+      } else {
+          if(this.control.firstElementChild.type=='checkbox'){
+              this.control.firstElementChild.checked = true;
+          }
+      }
+  },
+  //checkbox点击监听
+  checkListener: function () {
+      var self = this;
+      var checkboxes = self.control.firstElementChild;
+      if(checkboxes.type=='checkbox'){
+          checkboxes.addEventListener('change', function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              if (this.checked) {
+                  self.enable();
+              } else {
+                  self.disable();
+              }
+
+          });
+      }
   }
 });
+// select.js ↑

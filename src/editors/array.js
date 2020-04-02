@@ -1,3 +1,4 @@
+// array.js ↓
 JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return this.schema["default"] || [];
@@ -68,7 +69,11 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
     this.hide_delete_buttons = this.options.disable_array_delete || this.jsoneditor.options.disable_array_delete;
     this.hide_delete_all_rows_buttons = this.hide_delete_buttons || this.options.disable_array_delete_all_rows || this.jsoneditor.options.disable_array_delete_all_rows;
-    this.hide_delete_last_row_buttons = this.hide_delete_buttons || this.options.disable_array_delete_last_row || this.jsoneditor.options.disable_array_delete_last_row;
+    // 2020/4/3 修改 ↓
+    // this.hide_delete_last_row_buttons = this.hide_delete_buttons || this.options.disable_array_delete_last_row || this.jsoneditor.options.disable_array_delete_last_row;
+    // 当disable_array_delete:true时，保留delete_last_row_buttons按钮
+    this.hide_delete_last_row_buttons = this.options.disable_array_delete_last_row || this.jsoneditor.options.disable_array_delete_last_row;
+    // 2020/4/3 修改 ↑
     this.hide_move_buttons = this.options.disable_array_reorder || this.jsoneditor.options.disable_array_reorder;
     this.hide_add_button = this.options.disable_array_add || this.jsoneditor.options.disable_array_add;
   },
@@ -97,8 +102,25 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         this.row_holder = this.theme.getTabContentHolder(this.tabs_holder);
 
         this.active_tab = null;
+      } else if (this.schema.format === 'htabs') {
+        // this.theme.getStyles(this.title,this.schema.styles);
+        this.controls = this.theme.getHeaderButtonHolder();
+        this.title.appendChild(this.controls);
+        this.htabs_holder = this.theme.getHTabHolder();
+        this.container.appendChild(this.htabs_holder);
+        this.row_holder = this.theme.getTabContentHolder(this.htabs_holder);
+
+        this.active_tab = null;
       }
-      else {
+      //颜色数组绘制
+      else if (this.schema.items.format === 'minicolor') {
+        this.panel = this.theme.getIndentedPanel();
+        this.container.appendChild(this.panel);
+        this.row_holder = document.createElement('div');
+        this.panel.appendChild(this.row_holder);
+        this.controls = this.theme.getButtonHolder();
+        this.panel.appendChild(this.controls);
+      } else {
         this.panel = this.theme.getIndentedPanel();
         this.container.appendChild(this.panel);
         this.row_holder = document.createElement('div');
@@ -115,7 +137,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         this.row_holder = document.createElement('div');
         this.panel.appendChild(this.row_holder);
     }
-
+    this.theme.getStyles(this.title,this.schema.styles);
     // Add controls
     this.addControls();
   },
@@ -193,7 +215,13 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       holder = this.theme.getChildEditorHolder();
     }
     else {
+      // holder = this.theme.getIndentedPanel();
+      //增加对颜色format的判断，引用颜色数组模版
+      if (this.schema.items.format === 'minicolor') {
+        holder = this.theme.getIndentedPanelArray();
+      } else {
       holder = this.theme.getIndentedPanel();
+      }
     }
 
     this.row_holder.appendChild(holder);
@@ -458,6 +486,18 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       });
 
       self.theme.addTab(self.tabs_holder, self.rows[i].tab);
+    } else if (self.htabs_holder) {
+      self.rows[i].tab_text = document.createElement('span');
+      self.rows[i].tab_text.textContent = self.rows[i].getHeaderText();
+      self.rows[i].tab = self.theme.getHTab(self.rows[i].tab_text);
+      self.rows[i].tab.addEventListener('click', function (e) {
+          self.active_tab = self.rows[i].tab;
+          self.refreshTabs();
+          e.preventDefault();
+          e.stopPropagation();
+      });
+
+      self.theme.addTab(self.htabs_holder, self.rows[i].tab);
     }
     
     var controls_holder = self.rows[i].title_controls || self.rows[i].array_controls;
@@ -706,3 +746,4 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     });
   }
 });
+// array.js ↑
