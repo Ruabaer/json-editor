@@ -1,4 +1,4 @@
-// defaults.js ¡ý
+// defaults.js â†“
 // Set the default theme
 JSONEditor.defaults.theme = 'html';
 
@@ -12,17 +12,17 @@ JSONEditor.defaults.options = {};
 JSONEditor.defaults.translate = function(key, variables) {
   var lang = JSONEditor.defaults.languages[JSONEditor.defaults.language];
   if(!lang) throw "Unknown language "+JSONEditor.defaults.language;
-  
+
   var string = lang[key] || JSONEditor.defaults.languages[JSONEditor.defaults.default_language][key];
-  
+
   if(typeof string === "undefined") throw "Unknown translate string "+key;
-  
+
   if(variables) {
     for(var i=0; i<variables.length; i++) {
       string = string.replace(new RegExp('\\{\\{'+i+'}}','g'),variables[i]);
     }
   }
-  
+
   return string;
 };
 
@@ -217,7 +217,7 @@ JSONEditor.plugins = {
 
   },
   select2: {
-    
+
   },
   selectize: {
   },
@@ -309,12 +309,12 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
     return "table";
   }
 });
-//µÚÈý²½£ºÌí¼Ó½âÎöÆ÷
-//À©Õ¹
+//ç¬¬ä¸‰æ­¥ï¼šæ·»åŠ è§£æžå™¨
+//æ‰©å±•
 JSONEditor.defaults.resolvers.unshift(function (schema) {
   if (schema.type === 'integer' && schema.format === "rating") return "rating";
 });
-//ÑÕÉ«
+//é¢œè‰²
 JSONEditor.defaults.resolvers.unshift(function (schema) {
   if (schema.type === 'string' && schema.format === "colorpicker") return "colorpicker";
 });
@@ -332,7 +332,7 @@ JSONEditor.defaults.resolvers.unshift(function (schema) {
 JSONEditor.defaults.resolvers.unshift(function (schema) {
   if(schema.type==='string'&&schema.format==="minicolor") return "minicolor";
 });
-//ace´úÂë±à¼­Æ÷
+//aceä»£ç ç¼–è¾‘å™¨
 JSONEditor.defaults.resolvers.unshift(function (schema) {
   if(schema.type==='string'&&schema.format==='acedit') return "acedit";
 });
@@ -370,4 +370,4 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
   // If this schema uses `oneOf` or `anyOf`
   if(schema.oneOf || schema.anyOf) return "multiple";
 });
-// defaults.js ¡ü
+// defaults.js â†‘

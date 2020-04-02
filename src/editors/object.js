@@ -1,4 +1,4 @@
-// object.js ¡ı
+// object.js â†“
 JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return $extend({},this.schema["default"] || {});
@@ -337,9 +337,9 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       this.editjson_holder.appendChild(this.editjson_cancel);
 
       // Manage Properties modal
-      // Ìí¼Ó ¡ı
+      // æ·»åŠ  â†“
       this.theme.getStyles(this.title, this.schema.styles);
-      // Ìí¼Ó¡ü
+      // æ·»åŠ â†‘
       this.addproperty_holder = this.theme.getModal();
       this.addproperty_list = document.createElement('div');
       this.addproperty_list.style.width = '295px';
@@ -392,10 +392,10 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       // Container for child editor area
       this.editor_holder = this.theme.getIndentedPanel();
       this.container.appendChild(this.editor_holder);
-      // Ìí¼Ó ¡ı
+      // æ·»åŠ  â†“
       this.theme.getStyles(this.editor_holder, this.schema.styles);
-      // Ìí¼Ó ¡ü
-      //×ÓÔªËØµÄĞĞÈİÆ÷
+      // æ·»åŠ  â†‘
+      //å­å…ƒç´ çš„è¡Œå®¹å™¨
 
       // Container for rows of child editors
       this.row_container = this.theme.getGridContainer();
@@ -718,12 +718,13 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
           if(typeof result[i] === 'undefined' || result[i] === '' || Object.keys(result[i]).length == 0 && result[i].constructor == Object) delete result[i];
         }
         */
-        //¶ÔbooleanĞÍ½øĞĞ·ÖÀë ²»½øĞĞÉ¾³ı²Ù×÷
+        //å¯¹booleanå‹è¿›è¡Œåˆ†ç¦» ä¸è¿›è¡Œåˆ é™¤æ“ä½œ
         if (result.hasOwnProperty(i) &&this.schema.properties.hasOwnProperty(i) &&this.schema.properties[i].hasOwnProperty('type') && this.schema.properties[i].type != 'boolean') {
           if (!result[i]) delete result[i];
         }
       }
-      return result;
+    }
+    return result;
   },
   refreshValue: function() {
     this.value = {};
@@ -905,4 +906,4 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     });
   }
 });
-// object.js ¡ü
+// object.js â†‘
