@@ -5,33 +5,77 @@ JSONEditor.defaults.editors.rating = JSONEditor.defaults.editors.integer.extend(
       if (!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
       if (this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
 
+    // Dynamically add the required CSS the first time this editor is used
       var styleId = 'json-editor-style-rating';
       var styles = document.getElementById(styleId);
       if (!styles) {
         var style = document.createElement('style');
         style.id = styleId;
         style.type = 'text/css';
-        style.innerHTML = '.rating-container ' +
-          '{display: inline-block;clear: both;}' +
-          '.rating {float:left;}' +
-          '.rating:not(:checked) > input {position:absolute;top:-9999px;clip:rect(0,0,0,0);}' +
-          '.rating:not(:checked) > label {float:right;width:1em;padding:0 .1em;overflow:hidden;white-space:nowrap;cursor:pointer;color:#ddd;}' +
-          '.rating:not(:checked) > label:before {content: "★ ";}' +
-          '.rating > input:checked ~ label {color: #FF7700;}' +
-          '.rating:not(:checked) > label:hover,.rating:not(:checked) > label:hover ~ label {color: #FFD308;}' +
-          '.rating > input:checked + label:hover,.rating > input:checked + label:hover ~ label,.rating > input:checked ~ label:hover,.rating > input:checked ~ label:hover ~ label,.rating > label:hover ~ input:checked ~ label {color: #ea0;}' +
-          '.rating > label:active {position:relative;top:2px;left:2px;}';
+      style.innerHTML =
+        '      .rating-container {' +
+        '        display: inline-block;' +
+        '        clear: both;' +
+        '      }' +
+        '      ' +
+        '      .rating {' +
+        '        float:left;' +
+        '      }' +
+        '      ' +
+        '      /* :not(:checked) is a filter, so that browsers that don’t support :checked don’t' +
+        '         follow these rules. Every browser that supports :checked also supports :not(), so' +
+        '         it doesn’t make the test unnecessarily selective */' +
+        '      .rating:not(:checked) > input {' +
+        '        position:absolute;' +
+        '        top:-9999px;' +
+        '        clip:rect(0,0,0,0);' +
+        '      }' +
+        '      ' +
+        '      .rating:not(:checked) > label {' +
+        '        float:right;' +
+        '        width:1em;' +
+        '        padding:0 .1em;' +
+        '        overflow:hidden;' +
+        '        white-space:nowrap;' +
+        '        cursor:pointer;' +
+        '        color:#ddd;' +
+        '      }' +
+        '      ' +
+        '      .rating:not(:checked) > label:before {' +
+        '        content: \'★ \';' +
+        '      }' +
+        '      ' +
+        '      .rating > input:checked ~ label {' +
+        '        color: #FFB200;' +
+        '      }' +
+        '      ' +
+        '      .rating:not([readOnly]):not(:checked) > label:hover,' +
+        '      .rating:not([readOnly]):not(:checked) > label:hover ~ label {' +
+        '        color: #FFDA00;' +
+        '      }' +
+        '      ' +
+        '      .rating:not([readOnly]) > input:checked + label:hover,' +
+        '      .rating:not([readOnly]) > input:checked + label:hover ~ label,' +
+        '      .rating:not([readOnly]) > input:checked ~ label:hover,' +
+        '      .rating:not([readOnly]) > input:checked ~ label:hover ~ label,' +
+        '      .rating:not([readOnly]) > label:hover ~ input:checked ~ label {' +
+        '        color: #FF8C0D;' +
+        '      }' +
+        '      ' +
+        '      .rating:not([readOnly])  > label:active {' +
+        '        position:relative;' +
+        '        top:2px;' +
+        '        left:2px;' +
+        '      }';
         document.getElementsByTagName('head')[0].appendChild(style);
       }
 
       this.input = this.theme.getFormInputField('hidden');
       this.container.appendChild(this.input);
 
-      // Required to keep height
       var ratingContainer = document.createElement('div');
       ratingContainer.className = 'rating-container';
 
-      // Contains options for rating
       var group = document.createElement('div');
       group.setAttribute('name', this.formname);
       group.className = 'rating';
@@ -61,6 +105,14 @@ JSONEditor.defaults.editors.rating = JSONEditor.defaults.editors.integer.extend(
         label.setAttribute('for', id);
         label.appendChild(document.createTextNode(i + (i == 1 ? ' star' : ' stars')));
         group.appendChild(label);
+    }
+
+    if(this.schema.readOnly || this.schema.readonly) {
+      this.always_disabled = true;
+      $each(this.inputs,function(i,input) {
+        group.setAttribute("readOnly", "readOnly");
+        input.disabled = true;
+      });
       }
 
       ratingContainer

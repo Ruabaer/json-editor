@@ -1,4 +1,4 @@
-// select.js ↓
+// select.js ¡ý
 JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     value = this.typecast(value||'');
@@ -17,6 +17,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     if(this.select2) this.select2.select2('val',this.input.value);
     this.value = sanitized;
     this.onChange();
+    this.change();
   },
   register: function() {
     this._super();
@@ -51,7 +52,10 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     }
   },
   getValue: function() {
-    return this.value;
+    if (!this.dependenciesFulfilled) {
+      return undefined;
+    }
+    return this.typecast(this.value);
   },
   preBuild: function() {
     var self = this;
@@ -157,7 +161,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     var self = this;
     if(!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
-
+    if(this.options.infoText) this.infoButton = this.theme.getInfoButton(this.options.infoText);
     if(this.options.compact) this.container.className += ' compact';
 
     this.input = this.theme.getSelectInput(this.enum_options);
@@ -174,8 +178,8 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       self.onInputChange();
     });
 
-    // this.control = this.theme.getFormControl(this.label, this.input, this.description);
-    this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
+    // this.control = this.theme.getFormControl(this.label, this.input, this.description, this.infoButton);
+    this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this.infoButton);
     this.container.appendChild(this.control);
 
     // this.value = this.enum_values[0];
@@ -185,7 +189,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.checkListener();
   },
   onInputChange: function() {
-    var val = this.input.value;
+    var val = this.typecast(this.input.value);
 
     var new_val;
     // Invalid option, use first option instead
@@ -324,7 +328,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       // Otherwise, set the value to the first select option
       else {
         this.input.value = select_options[0];
-        this.value = select_options[0] || "";
+        this.value = this.typecast(select_options[0] || "");  
         if(this.parent) this.parent.onChildEditorChange(this);
         else this.jsoneditor.onChange();
         this.jsoneditor.notifyWatchers(this.path);
@@ -345,21 +349,22 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       }else {
         this.value=this.input.value;
       }
-      // 添加 ↑
+      // Ìí¼Ó ¡ü
       if(this.select2) this.select2.select2("enable",true);
     }
-    // 添加 ↓
+    // Ìí¼Ó ¡ý
     this.refreshValue();
     this.onChange(true);
-    // 添加 ↑
+    // Ìí¼Ó ¡ü
     this._super();
   },
-  disable: function() {
+  disable: function(always_disabled) {
+    if(always_disabled) this.always_disabled = true;
     this.input.disabled = true;
-    // 添加 ↓
+    // Ìí¼Ó ¡ý
     this.value=null;
     if(this.label) this.theme.disableLabel(this.label);
-    // 添加 ↑
+    // Ìí¼Ó ¡ü
     if(this.select2) this.select2.select2("enable",false);
     this.refreshValue();
     this.onChange(true);
@@ -389,7 +394,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
           }
       }
   },
-  //checkbox点击监听
+  //checkboxµã»÷¼àÌý
   checkListener: function () {
       var self = this;
       var checkboxes = self.control.firstElementChild;
@@ -407,4 +412,4 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       }
   }
 });
-// select.js ↑
+// select.js ¡ü
