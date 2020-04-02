@@ -10,12 +10,12 @@ JSONEditor.AbstractEditor = Class.extend({
     if(!this.jsoneditor){
       return;
     }
-    this.jsoneditor.notifyWatchers(this.path);
+    if(this.path) this.jsoneditor.notifyWatchers(this.path);
   },
   /*
   change: function() {
     if(this.parent) this.parent.onChildEditorChange(this);
-    else this.jsoneditor.onChange();
+    else if(this.jsoneditor) this.jsoneditor.onChange();
   },
   */
   change: function (newVal,key,path) {
