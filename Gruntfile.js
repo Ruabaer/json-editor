@@ -29,6 +29,7 @@ module.exports = function(grunt) {
           'src/editor.js',
           'src/editors/null.js',
           'src/editors/string.js',
+          'src/editors/hidden.js',
           'src/editors/number.js',
           'src/editors/integer.js',
           'src/editors/rating.js',
@@ -90,6 +91,7 @@ module.exports = function(grunt) {
       options: {
         browser: true,
         indent: 2,
+        devel:true,
         nonbsp: true,
         nonew: true,
         immed: true,
@@ -141,6 +143,35 @@ module.exports = function(grunt) {
           src: ['dist/jsoneditor.js']
         }
       }
+    },
+    connect: {
+        default: {
+            options: {
+                port: 9000,
+                hostname: 'localhost',
+                debug: true,
+                keepalive: true
+            }
+        },
+        testing: {
+            options: {
+                port: 9001,
+                hostname: 'localhost',
+                debug: true
+            }
+        }
+    },
+    run: {
+        options: {
+            // Task-specific options
+        },
+        mocha: {
+            cmd: 'mocha',
+            args: [
+                'tests/selenium/*.js',
+                '--reporter=nyan'
+            ]
+        }
     }
   });
 
@@ -149,8 +180,16 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-concat');
+  grunt.loadNpmTasks('grunt-contrib-connect');
+  grunt.loadNpmTasks('grunt-run');
 
-  // Default task.
+  // Serve files for testing
+  grunt.registerTask('serve', 'connect:default');
+
+  // Run mocha tests
+  grunt.registerTask('test', ['connect:testing', 'run:mocha']);
+
+    // Default task.
   grunt.registerTask('default', ['jshint:beforeconcat','concat','jshint:afterconcat','uglify']);
 
 };

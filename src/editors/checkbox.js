@@ -1,4 +1,4 @@
-// checkbox.js ¡ý
+// checkbox.js Â¡Ã½
 JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     this.value = !!value;
@@ -24,16 +24,17 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
       this.label = this.header = this.theme.getCheckboxLabel(this.getTitle());
     }
     if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+    if(this.options.infoText) this.infoButton = this.theme.getInfoButton(this.options.infoText);
     if(this.options.compact) this.container.className += ' compact';
 
     this.input = this.theme.getCheckbox();
     // this.control = this.theme.getFormControl(this.label, this.input, this.description);
     switch(this.schema.format){
       case 'switch':
-      this.control = this.theme.getSwitchFormControl(this.label, this.input, this.description,this);
-      break;
+        this.control = this.theme.getSwitchFormControl(this.label, this.input, this.description,this);
+        break;
       default:
-      this.control = this.theme.getFormControl(this.label, this.input, this.description);
+        this.control = this.theme.getFormControl(this.label, this.input, this.description, this.infoButton);
     }
 
     if(this.schema.readOnly || this.schema.readonly) {
@@ -45,10 +46,10 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
       e.preventDefault();
       e.stopPropagation();
       self.value = this.checked;
-      // Ìí¼Ó ¡ý
+      // ÃŒÃ­Â¼Ã“ Â¡Ã½
       if(self.value) this.setAttribute('data-switch','on');
       else this.setAttribute('data-switch','off');
-      // Ìí¼Ó ¡ü
+      // ÃŒÃ­Â¼Ã“ Â¡Ã¼
       self.onChange(true);
     });
 
@@ -57,10 +58,11 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
   enable: function() {
     if(!this.always_disabled) {
       this.input.disabled = false;
+      this._super();
     }
-    this._super();
   },
-  disable: function() {
+  disable: function(always_disabled) {
+    if(always_disabled) this.always_disabled = true;
     this.input.disabled = true;
     this._super();
   },
@@ -71,4 +73,4 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
     this._super();
   }
 });
-// checkbox.js ¡ü
+// checkbox.js Â¡Ã¼
