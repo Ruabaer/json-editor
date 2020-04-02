@@ -210,7 +210,7 @@ JSONEditor.plugins = {
   ace: {
     theme: ''
   },
-  epiceditor: {
+  SimpleMDE: {
 
   },
   sceditor: {
