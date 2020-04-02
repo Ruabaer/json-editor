@@ -1,3 +1,4 @@
+// intro.js ↓
 /*! JSON Editor v0.7.28 - JSON Schema -> HTML Editor
  * By Jeremy Dorn - https://github.com/jdorn/json-editor/
  * Released under the MIT license
@@ -9,7 +10,22 @@
  * See README.md for requirements and usage info
  */
 
-(function() {
+// (function() {
+// 2020/4/2 添加 ↓
+(function(root,factory){
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(['jquery'], factory);
+    } else if (typeof exports === 'object') {
+        // Node/CommonJS
+        module.exports = factory(require('jquery'));
+    } else {
+        // Browser globals
+        root.JSONEditor=factory(root.jQuery);
+    }
+}(this,function(jQuery) {
+// 2020/4/2 添加  ↑
+// intro.js ↑
 
 /*jshint loopfunc: true */
 /* Simple JavaScript Inheritance
@@ -211,6 +227,7 @@ var $triggerc = function(el,event) {
   el.dispatchEvent(e);
 };
 
+// core.js ↓
 var JSONEditor = function(element,options) {
   if (!(element instanceof Element)) {
     throw new Error('element should be an instance of Element');
@@ -362,10 +379,25 @@ JSONEditor.prototype = {
     
     return this;
   },
+  /*
   trigger: function(event) {
     if(this.callbacks && this.callbacks[event] && this.callbacks[event].length) {
       for(var i=0; i<this.callbacks[event].length; i++) {
         this.callbacks[event][i]();
+      }
+    }
+
+    return this;
+  },
+  */
+  trigger: function() {
+    var key = Array.prototype.shift.call(arguments);
+    if(this.callbacks && this.callbacks[key] && this.callbacks[key].length) {
+      var fns = this.callbacks[key];
+      for(var i=0; i<fns.length; i++) {
+        var fn=fns[i];
+        if(arguments.length) fn.apply(this, arguments);
+        // this.callbacks[event][i]();
       }
     }
     
@@ -407,7 +439,37 @@ JSONEditor.prototype = {
     options = $extend({},editor_class.options||{},options);
     return new editor_class(options);
   },
+  /*
   onChange: function() {
+    if(!this.ready) return;
+
+    if(this.firing_change) return;
+    this.firing_change = true;
+
+    var self = this;
+
+    window.requestAnimationFrame(function() {
+      self.firing_change = false;
+      if(!self.ready) return;
+
+      // Validate and cache results
+      self.validation_results = self.validator.validate(self.root.getValue());
+
+      if(self.options.show_errors !== "never") {
+        self.root.showValidationErrors(self.validation_results);
+      }
+      else {
+        self.root.showValidationErrors([]);
+      }
+
+      // Fire change event
+      self.trigger('change');
+    });
+
+    return this;
+  },
+  */
+  onChange: function(newVal,key,path) {
     if(!this.ready) return;
     
     if(this.firing_change) return;
@@ -428,11 +490,13 @@ JSONEditor.prototype = {
       else {
         self.root.showValidationErrors([]);
       }
-      
-      // Fire change event
-      self.trigger('change');
     });
-    
+    // Fire change event
+    if(newVal === undefined) {
+      return;
+    }
+    this.trigger('change',newVal,key,path);
+
     return this;
   },
   compileTemplate: function(template, name) {
@@ -807,6 +871,7 @@ JSONEditor.defaults = {
   resolvers: [],
   custom_validators: []
 };
+// core.js ↑
 
 JSONEditor.Validator = Class.extend({
   init: function(jsoneditor,schema,options) {
@@ -1384,6 +1449,7 @@ JSONEditor.Validator = Class.extend({
   }
 });
 
+// editor.js ↓
 /**
  * All editors should extend from this class
  */
@@ -1392,16 +1458,28 @@ JSONEditor.AbstractEditor = Class.extend({
     this.onChange(true);
   },
   notify: function() {
+    if(!this.jsoneditor){
+      return;
+    }
     if(this.path) this.jsoneditor.notifyWatchers(this.path);
   },
+  /*
   change: function() {
     if(this.parent) this.parent.onChildEditorChange(this);
     else if(this.jsoneditor) this.jsoneditor.onChange();
   },
+  */
+  change: function (newVal,key,path) {
+    if (this.parent) {
+        this.jsoneditor.onChange(newVal,key,path);
+        this.parent.onChildEditorChange(this);
+    }
+  },
   onChange: function(bubble) {
     this.notify();
     if(this.watch_listener) this.watch_listener();
-    if(bubble) this.change();
+    // if(bubble) this.change();
+    if (bubble) this.change(this.value,this.key,this.path);
   },
   register: function() {
     this.jsoneditor.registerEditor(this);
@@ -1747,8 +1825,11 @@ JSONEditor.AbstractEditor = Class.extend({
     this.parent = null;
   },
   getDefault: function() {
+    if (!this.schema.disable) {
     if(this.schema["default"]) return this.schema["default"];
     if(this.schema["enum"]) return this.schema["enum"][0];
+      if (this.schema.format=="minicolor") return JSONEditor.plugins.minicolor.defaultValue;
+    }
     
     var type = this.schema.type || this.schema.oneOf;
     if(type && Array.isArray(type)) type = type[0];
@@ -1868,6 +1949,7 @@ JSONEditor.defaults.editors["null"] = JSONEditor.AbstractEditor.extend({
   }
 });
 
+// string.js ↓
 JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
   register: function() {
     this._super();
@@ -1905,8 +1987,8 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(this.sceditor_instance) {
       this.sceditor_instance.val(sanitized);
     }
-    else if(this.epiceditor) {
-      this.epiceditor.importFile(null,sanitized);
+    else if(this.SimpleMDE) {
+      this.SimpleMDE.value(sanitized);
     }
     else if(this.ace_editor) {
       this.ace_editor.setValue(sanitized);
@@ -2122,7 +2204,8 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
 
     if(this.format) this.input.setAttribute('data-schemaformat',this.format);
 
-    this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    // this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
     this.container.appendChild(this.control);
 
     // Any special formatting that needs to happen after the input is added to the dom
@@ -2142,17 +2225,40 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     else {
       this.refreshValue();
     }
+    //设置初始状态
+    this.initstatus(this.label);
+    //监听checkbox
+    this.checkListener();
+  },
+  initstatus:function (label) {//初始化状态 是否禁用
+    if(this.schema.disable===false) {
+        this.input.disabled=true;
+        this.theme.disableLabel(label);
+        this.control.firstElementChild.checked=false;
+    }else {
+        this.control.firstElementChild.checked=true;
+    }
   },
   enable: function() {
     if(!this.always_disabled) {
       this.input.disabled = false;
       // TODO: WYSIWYG and Markdown editors
+      if(this.label) this.theme.enableLabel(this.label);
+      this.value=this.input.value;
     }
+    this.refreshValue();
+    this.onChange(true);
     this._super();
   },
   disable: function() {
     this.input.disabled = true;
     // TODO: WYSIWYG and Markdown editors
+    if(this.label) this.theme.disableLabel(this.label);
+    this.value=null;
+
+    //此处为了禁用后input中仍显示之前的值，所以不进行refresh
+
+    this.onChange(true);
     this._super();
   },
   afterInputReady: function() {
@@ -2188,25 +2294,16 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
           self.onChange(true);
         });
       }
-      // EpicEditor for markdown (if it's loaded)
-      else if (this.input_type === 'markdown' && window.EpicEditor) {
-        this.epiceditor_container = document.createElement('div');
-        this.input.parentNode.insertBefore(this.epiceditor_container,this.input);
-        this.input.style.display = 'none';
-        
-        options = $extend({},JSONEditor.plugins.epiceditor,{
-          container: this.epiceditor_container,
-          clientSideStorage: false
+      // SimpleMDE for markdown (if it's loaded)
+      else if (this.input_type === 'markdown' && window.SimpleMDE) {
+        options = $extend({},JSONEditor.plugins.SimpleMDE,{
+          element: this.input
         });
-        
-        this.epiceditor = new window.EpicEditor(options).load();
-        
-        this.epiceditor.importFile(null,this.getValue());
-      
-        this.epiceditor.on('update',function() {
-          var val = self.epiceditor.exportFile();
-          self.input.value = val;
-          self.value = val;
+
+        this.SimpleMDE = new window.SimpleMDE((options));
+
+        this.SimpleMDE.codemirror.on("change",function() {
+          self.value = self.SimpleMDE.value();
           self.is_dirty = true;
           self.onChange(true);
         });
@@ -2232,9 +2329,10 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
         // The theme
         if(JSONEditor.plugins.ace.theme) this.ace_editor.setTheme('ace/theme/'+JSONEditor.plugins.ace.theme);
         // The mode
-        mode = window.ace.require("ace/mode/"+mode);
-        if(mode) this.ace_editor.getSession().setMode(new mode.Mode());
-        
+        this.ace_editor.getSession().setMode('ace/mode/'+mode);
+        // mode = window.ace.require("ace/mode/"+mode);
+        // if(mode) this.ace_editor.getSession().setMode(new mode.Mode());
+
         // Listen for changes
         this.ace_editor.on('change',function() {
           var val = self.ace_editor.getValue();
@@ -2258,8 +2356,8 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     if(this.sceditor_instance) {
       this.sceditor_instance.destroy();
     }
-    else if(this.epiceditor) {
-      this.epiceditor.unload();
+    else if(this.SimpleMDE) {
+      this.SimpleMDE.destroy();
     }
     else if(this.ace_editor) {
       this.ace_editor.destroy();
@@ -2314,8 +2412,23 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     else {
       this.theme.removeInputError(this.input);
     }
+  },
+  //checkbox点击监听
+  checkListener: function () {
+      var self = this;
+      var checkboxes = self.control.firstElementChild;
+      checkboxes.addEventListener('change', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (this.checked) {
+              self.enable();
+          } else {
+              self.disable();
+          }
+      });
   }
 });
+// string.js ↑
 
 JSONEditor.defaults.editors.number = JSONEditor.defaults.editors.string.extend({
   sanitize: function(value) {
@@ -2339,6 +2452,1034 @@ JSONEditor.defaults.editors.integer = JSONEditor.defaults.editors.number.extend(
   }
 });
 
+// rating.js ↓
+JSONEditor.defaults.editors.rating = JSONEditor.defaults.editors.integer.extend({
+    build: function () {
+      var self = this, i;
+      if (!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
+      if (this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+
+      var styleId = 'json-editor-style-rating';
+      var styles = document.getElementById(styleId);
+      if (!styles) {
+        var style = document.createElement('style');
+        style.id = styleId;
+        style.type = 'text/css';
+        style.innerHTML = '.rating-container ' +
+          '{display: inline-block;clear: both;}' +
+          '.rating {float:left;}' +
+          '.rating:not(:checked) > input {position:absolute;top:-9999px;clip:rect(0,0,0,0);}' +
+          '.rating:not(:checked) > label {float:right;width:1em;padding:0 .1em;overflow:hidden;white-space:nowrap;cursor:pointer;color:#ddd;}' +
+          '.rating:not(:checked) > label:before {content: "★ ";}' +
+          '.rating > input:checked ~ label {color: #FF7700;}' +
+          '.rating:not(:checked) > label:hover,.rating:not(:checked) > label:hover ~ label {color: #FFD308;}' +
+          '.rating > input:checked + label:hover,.rating > input:checked + label:hover ~ label,.rating > input:checked ~ label:hover,.rating > input:checked ~ label:hover ~ label,.rating > label:hover ~ input:checked ~ label {color: #ea0;}' +
+          '.rating > label:active {position:relative;top:2px;left:2px;}';
+        document.getElementsByTagName('head')[0].appendChild(style);
+      }
+
+      this.input = this.theme.getFormInputField('hidden');
+      this.container.appendChild(this.input);
+
+      // Required to keep height
+      var ratingContainer = document.createElement('div');
+      ratingContainer.className = 'rating-container';
+
+      // Contains options for rating
+      var group = document.createElement('div');
+      group.setAttribute('name', this.formname);
+      group.className = 'rating';
+      ratingContainer.appendChild(group);
+
+      if (this.options.compact) this.container.setAttribute('class', this.container.getAttribute('class') + ' compact');
+
+      if (this.schema.readOnly || this.schema.readonly) {
+        this.always_disabled = true;
+        this.input.disabled = true;
+      }
+
+      var max = this.schema.maximum ? this.schema.maximum : 5;
+      if (this.schema.exclusiveMaximum) max--;
+
+      this.inputs = [];
+      for (i = max; i > 0; i--) {
+        var id = this.formname + i;
+        var radioInput = this.theme.getFormInputField('radio');
+        radioInput.setAttribute('id', id);
+        radioInput.setAttribute('value', i);
+        radioInput.setAttribute('name', this.formname);
+        group.appendChild(radioInput);
+        this.inputs.push(radioInput);
+
+        var label = document.createElement('label');
+        label.setAttribute('for', id);
+        label.appendChild(document.createTextNode(i + (i == 1 ? ' star' : ' stars')));
+        group.appendChild(label);
+      }
+
+      ratingContainer
+        .addEventListener('change', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          self.input.value = e.srcElement.value;
+
+          self.is_dirty = true;
+
+          self.refreshValue();
+          self.watch_listener();
+          self.jsoneditor.notifyWatchers(self.path);
+          if (self.parent) self.parent.onChildEditorChange(self);
+          else self.jsoneditor.onChange();
+        });
+
+      this.control = this.theme.getFormControl(this.label, ratingContainer, this.description);
+      this.container.appendChild(this.control);
+
+      this.refreshValue();
+    },
+    setValue: function (val) {
+      var sanitized = this.sanitize(val);
+      if (this.value === sanitized) {
+        return;
+      }
+      var self = this;
+      $each(this.inputs, function (i, input) {
+        if (input.value === sanitized) {
+          input.checked = true;
+          self.value = sanitized;
+          self.input.value = self.value;
+          self.watch_listener();
+          self.jsoneditor.notifyWatchers(self.path);
+          return false;
+        }
+      });
+    }
+  });
+  // rating.js ↑
+// colorpicker.js ↓
+/**
+ * Created by Administrator on 2017/3/3.
+ */
+JSONEditor.defaults.editors.colorpicker = JSONEditor.AbstractEditor.extend({
+    register: function() {
+        this._super();
+        this.colorpickerHex=document.getElementsByClassName('colorpicker_hex');
+        for(var i=0;i<this.colorpickerHex.length;i++){
+            for(var j=0;j<this.colorpickerHex[i].getElementsByTagName('input').length;j++){
+                this.colorpickerHex[i].getElementsByTagName('input')[j].setAttribute('name',this.formname);
+            }
+
+        }
+
+
+    },
+    setValue: function (value) {
+        this.value=value;
+        this.change();
+    },
+    getValue:function () {
+        return this.value;
+    },
+
+    build: function () {
+        var self = this;
+        if (!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
+        if (this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+
+
+        this.format = this.schema.format;
+
+        var mid=this.schema.options.colorpicker_option.mid;
+
+        //界面绘制
+        this.draw();
+
+        if (this.options.compact) this.container.className += ' compact';
+        this.control = this.theme.getFormControl(this.label, this.draw(), this.description);
+        this.container.appendChild(this.control);
+
+        this.setupColorPicker(mid);
+
+        var btn=document.getElementsByClassName('colorpicker_submit');
+        function colorpickerSubmit(i) {
+            btn[i].addEventListener('click',function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.is_dirty = true;
+
+                self.refreshValue();
+                self.onChange(true);
+            });
+        }
+        for(var i=0;i<btn.length;i++){
+            colorpickerSubmit(i);
+        }
+    },
+    draw:function () {
+        var colorContainer, colorSelect, colorpickerHolder;
+        var mid=this.schema.options.colorpicker_option.mid;
+        colorContainer = document.createElement('div');
+        colorSelect = document.createElement('div');
+        colorpickerHolder = document.createElement('div');
+
+        colorContainer.className = 'color-container row';
+        colorSelect.className = 'col-md-2';
+        colorpickerHolder.className = 'col-md-2';
+
+        if(mid) {
+            colorSelect.id = 'colorSelector' + '_' + mid;
+            colorpickerHolder.id = 'colorpickerHolder' + '_' + mid;
+        }else {
+            colorSelect.id = 'colorSelector' + '_' + 256;
+            colorpickerHolder.id = 'colorpickerHolder' + '_' + 256;
+        }
+
+
+        colorContainer.appendChild(colorSelect);
+        colorContainer.appendChild(colorpickerHolder);
+
+        return colorContainer;
+    },
+    setupColorPicker: function (mid) {
+        var self=this;
+        this.value='ff0000';
+        var fn={
+            onSubmit: function(hsb, hex, rgb, el) {
+                self.value=hex;
+            }
+        };
+        var options = $extend({}, JSONEditor.plugins.colorpicker,fn);
+        if (this.schema.options && this.schema.options.colorpicker_option) options = $extend(options, this.schema.options.colorpicker_option);
+        if(mid){
+            this.colorPicker = jQuery('#colorpickerHolder'+'_'+mid).ColorPicker(options);
+        }else {
+            this.colorPicker = jQuery('#colorpickerHolder'+'_'+256).ColorPicker(options);
+        }
+
+    }
+
+});
+// colorpicker.js ↑
+// checkboxradio.js ↓
+/**
+ * Created by Administrator on 2017/3/9.
+ * 第四步：创建扩展editor
+ */
+JSONEditor.defaults.editors.checkboxradio = JSONEditor.AbstractEditor.extend({
+    register: function () {
+        this._super();
+        if (!this.input) return;
+        this.input.setAttribute('name', this.formname);
+    },
+    typecast: function (value) {
+        if (this.schema.type === "boolean") {
+            return !!value;
+        }
+        else if (this.schema.type === "number") {
+            return 1 * value;
+        }
+        else if (this.schema.type === "integer") {
+            return Math.floor(value * 1);
+        }
+        else {
+            return "" + value;
+        }
+    },
+    setValue: function (value) {
+        value = this.typecast(value || '');
+        var sanitized = value;
+
+        // if (this.enum_values.indexOf(sanitized) < 0) {
+        //     sanitized = this.enum_values[0];
+        // }
+
+        var enum_val = this.enum_options[this.enum_values.indexOf(sanitized)];
+
+        $each(this.checkboxradio, function (key, obj) {
+            if (obj.value == enum_val) {
+                jQuery(obj).attr('checked', 'checked');
+                jQuery(obj).prev().addClass(" ui-checkboxradio-checked ui-state-active");
+            }
+        });
+
+
+        this.value = sanitized;
+
+        this.change();
+    },
+    getValue: function () {
+        return this.value;
+    },
+    preBuild: function () {
+        var self = this;
+        this.input_type = 'select';
+        this.enum_options = [];
+        this.enum_values = [];
+        this.enum_display = [];
+        var i;
+
+        // Enum options enumerated
+        if (this.schema.options.custom_option["enum"]) {
+            var display = this.schema.options && this.schema.options.custom_option && this.schema.options.custom_option.enum_titles || [];
+
+            $each(this.schema.options.custom_option["enum"], function (i, option) {
+                self.enum_options[i] = "" + option;
+                self.enum_display[i] = "" + (display[i] || option);
+                self.enum_values[i] = self.typecast(option);
+            });
+        }
+    },
+    build: function () {
+        var self = this;
+        if (!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
+        if (this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+
+        this.format = this.schema.format;
+
+        //界面绘制
+        this.input = this.draw();
+
+        //监听并赋值
+        this.input.addEventListener('change', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            self.value = e.srcElement.value;
+
+            self.is_dirty = true;
+
+            self.refreshValue();
+            self.onChange(true);
+        });
+
+
+        if (this.options.compact) this.container.className += ' compact';
+        this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
+        this.container.appendChild(this.control);
+
+        this.setupCheckboxRadio(this.label);
+
+        this.checkListener();
+
+        //监checkboxes
+
+
+    },
+    draw: function () {//绘制界面
+        var checkboxradioContainer, checkboxradioLabel, checkboxradioInput;
+        checkboxradioContainer = document.createElement('div');
+        checkboxradioContainer.className += " widget";
+        var unid=this.theme.GenNonDuplicateID();
+        var option = this.schema.options.custom_option;
+        for (var i = 0; i < option.enum_title.length; i++) {
+            var uuid=this.theme.GenNonDuplicateID();
+            checkboxradioLabel = document.createElement('label');
+            checkboxradioLabel.setAttribute('for', 'radio' + uuid);
+            checkboxradioLabel.innerHTML = option.enum_title[i];
+
+            checkboxradioInput = document.createElement('input');
+            checkboxradioInput.setAttribute('type', 'radio');
+            checkboxradioInput.name = 'radio'+unid;
+            checkboxradioInput.id = 'radio' + uuid;
+            checkboxradioInput.value = option.enum[i];
+            checkboxradioContainer.appendChild(checkboxradioLabel);
+            checkboxradioContainer.appendChild(checkboxradioInput);
+        }
+        return checkboxradioContainer;
+    },
+    setupCheckboxRadio: function (label) {
+        var options = $extend({}, JSONEditor.plugins.checkboxradio);
+        if (this.schema.options && this.schema.options.custom_option) options = $extend(options, this.schema.options.custom_option);
+        this.checkboxradio = jQuery('.widget input').checkboxradio(options);
+        this.initstatus(label);
+
+    },
+    initstatus:function (label) {
+        if(this.schema.disable) {
+            jQuery(this.input).children('input').checkboxradio("disable");
+            this.theme.disableLabel(label);
+        }else {
+            if(this.control.firstElementChild.type=='checkbox'){
+                this.control.firstElementChild.checked=true;
+            }
+        }
+
+    },
+    checkListener: function () {//创建监听checkbox
+        var self = this;
+        var checkboxes = self.control.firstElementChild;
+        if(checkboxes.type=='checkbox'){
+            checkboxes.addEventListener('change', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.checked) {
+                    self.enable();
+                } else {
+                    self.disable();
+                }
+
+            });
+        }
+    },
+    enable: function () {
+        jQuery(this.input).children('input').checkboxradio("enable");
+        this.theme.enableLabel(this.label);
+        this.value=this.input.value;
+        this.refreshValue();
+        this.onChange(true);
+        this._super();
+    },
+    disable: function () {
+        jQuery(this.input).children('input').checkboxradio("disable");
+        this.theme.disableLabel(this.label);
+        this.input.value=this.value;
+        this.value = null;
+
+        this.is_dirty = true;
+
+        this.onChange(true);
+        this._super();
+    }
+});
+// checkboxradio.js ↑
+// jpicker.js ↓
+/**
+ * Created by Administrator on 2017/3/17.
+ * 创建颜色拾取器编辑器
+ */
+JSONEditor.defaults.editors.jpicker = JSONEditor.AbstractEditor.extend({
+    register: function () {
+        this._super();
+    },
+    typecast: function (value) {
+        if (this.schema.type === "boolean") {
+            return !!value;
+        }
+        else if (this.schema.type === "number") {
+            return 1 * value;
+        }
+        else if (this.schema.type === "integer") {
+            return Math.floor(value * 1);
+        }
+        else {
+            return "" + value;
+        }
+    },
+    setValue: function (value) {
+        this.value = value;
+        this.change();
+
+    },
+    getValue: function () {
+        return this.value;
+    },
+    build: function () {
+        var self = this;
+        if (!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
+        if (this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+
+        this.format = this.schema.format;
+
+        //界面绘制
+        var uuid = this.theme.GenNonDuplicateID();
+        this.input = this.draw(uuid);
+
+        if (this.options.compact) this.container.className += ' compact';
+        this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
+        this.container.appendChild(this.control);
+
+
+        this.setupJpicker(this.label, uuid);
+
+        //监听并赋值
+        this.checkListener();
+
+    },
+    draw: function (uuid) {
+        var colorContainer;
+        colorContainer = document.createElement('input');
+        colorContainer.value = this.schema.default;
+        colorContainer.id = uuid;
+        colorContainer.style.display = 'none';
+        colorContainer.className = 'jpicker';
+        return colorContainer;
+
+    },
+    setupJpicker: function (label, uuid) {
+        var self = this;
+        //回调函数给颜色赋值
+        var fn = function (color, context) {
+            var all = color.val('all');
+            if (all === null) {
+                self.value = 'transparent';
+            } else {
+                self.value = '#' + all.hex;
+            }
+
+            self.refreshValue();
+            self.onChange(true);
+
+        };
+
+        var options = $extend({}, JSONEditor.plugins.jpicker);
+        if (this.schema.options && this.schema.options.custom_option) {
+            var jpConfig= this.schema.options.custom_option;
+            options = $extend(options, jpConfig);
+        }
+        jQuery.fn.jPicker.defaults.images.clientPath = 'lib/vbap-jpicker/dist/images/';
+        this.colorPicker = jQuery('#' + uuid).jPicker(options, fn);
+        this.initstatus(label);
+
+
+    },
+    initstatus: function (label) {
+        if (this.schema.disable) {
+            // jQuery(this.checkboxradio).checkboxradio("disable");
+            this.theme.disableLabel(label);
+        } else {
+            if (this.control.firstElementChild.type == 'checkbox') {
+                this.control.firstElementChild.checked = true;
+            }
+        }
+    },
+    checkListener: function () {
+        var self = this;
+        var checkboxes = self.control.firstElementChild;
+        if (checkboxes.type == 'checkbox') {
+            checkboxes.addEventListener('change', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.checked) {
+                    self.enable();
+                } else {
+                    self.disable();
+                }
+
+            });
+        }
+
+    },
+    enable: function () {
+        this.theme.enableLabel(this.label);
+        // this.value=jQuery.jPicker.List[0].color.active.val('hex');
+        this.value = this.input.value;
+        //去掉遮罩层
+        var spanjp = this.label.nextSibling.nextSibling.firstChild;
+        var spanjp_div = spanjp.getElementsByTagName('div')[0];
+        spanjp.removeChild(spanjp_div);
+
+        this.refreshValue();
+        this.onChange(true);
+        this._super();
+    },
+    disable: function () {
+        this.theme.disableLabel(this.label);
+
+        this.input.value = this.value;
+        this.value = null;
+
+        //添加遮罩层
+        var spanjp = this.label.nextSibling.nextSibling.firstChild;
+        var spanjp_div = document.createElement('div');
+        spanjp.appendChild(spanjp_div);
+        spanjp_div.style.backgroundColor = '#eee';
+        spanjp_div.style.width = '25px';
+        spanjp_div.style.height = '24px';
+        spanjp_div.style.position = 'relative';
+        spanjp_div.style.top = '-20px';
+        spanjp_div.style.zIndex = 10;
+        // spanjp_div.previousElementSibling.style.position='absolute';
+        // spanjp_div.parentElement.style.position='absolute';
+        spanjp_div.style.border = '1px solid #ccc';
+        spanjp_div.style.borderRadius = '50%';
+        spanjp_div.style.cursor = 'not-allowed';
+
+        this.is_dirty = true;
+
+        // this.refreshValue();
+        this.onChange(true);
+        this._super();
+    }
+
+});
+// jpicker.js ↑
+// minicolor.js ↓
+/**
+ * Created by Administrator on 2017/4/27.
+ */
+JSONEditor.defaults.editors.minicolor = JSONEditor.AbstractEditor.extend({
+    register: function () {
+        this._super();
+    },
+    typecast: function (value) {
+        if (this.schema.type === "boolean") {
+            return !!value;
+        }
+        else if (this.schema.type === "number") {
+            return 1 * value;
+        }
+        else if (this.schema.type === "integer") {
+            return Math.floor(value * 1);
+        }
+        else {
+            return "" + value;
+        }
+    },
+    setValue: function (value) {
+        this.value = value;
+        this.input.value = value;
+        jQuery(this.input).minicolors('value', value);
+        this.change();
+    },
+    getValue: function () {
+        return this.value;
+    },
+    refreshValue: function () {
+        this.value = this.getValue();
+    },
+    build: function () {
+        if (!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
+        if (this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+
+        this.format = this.schema.format;
+
+        var uuid = this.theme.GenNonDuplicateID();
+        this.input = this.draw(uuid);
+
+        if (this.options.compact) this.container.className += ' compact';
+        if (this.parent.schema.type === 'array') {
+            this.control = this.theme.getFormControlB3Array(this.label, this.input, this.description, this);
+        } else {
+            this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
+        }
+        this.container.appendChild(this.control);
+
+        this.setupMinicolor(this.label, uuid);
+        //监听并赋值
+        this.checkListener();
+    },
+    draw: function (uuid) {
+        var self = this;
+        var colorContainer;
+        colorContainer = document.createElement('input');
+        colorContainer.value = this.schema.default ? this.schema.default : "#ff6161";
+        colorContainer.id = uuid;
+        colorContainer.type = 'hidden';
+        colorContainer.className = 'minicolor';
+        return colorContainer;
+    },
+    setupMinicolor: function (label) {
+        var self = this;
+        var fn = {
+            change: function (value, opacity) {
+                self.value = value;
+                self.refreshValue();
+                self.onChange(true);
+            }
+        };
+        var options;
+        if (this.parent.schema.type === 'array'){
+            var colorArray={
+                colorArray:true
+            };
+            fn=$extend(fn,colorArray);
+            options = $extend({}, JSONEditor.plugins.minicolor, fn);
+        }else {
+            options = $extend({}, JSONEditor.plugins.minicolor, fn);
+        }
+        this.miniColor = jQuery(this.input).minicolors(options);
+        this.initstatus(label);
+    },
+    initstatus: function (label) {
+        if (this.schema.disable) {
+            this.theme.disableLabel(label);
+        } else {
+            if (this.control.firstElementChild.type == 'checkbox') {
+                this.control.firstElementChild.checked = true;
+            }
+        }
+    },
+    checkListener: function () {
+        var self = this;
+        var checkboxes = self.control.firstElementChild;
+        if (checkboxes.type == 'checkbox') {
+            checkboxes.addEventListener('change', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.checked) {
+                    self.enable();
+                } else {
+                    self.disable();
+                }
+
+            });
+        }
+
+    },
+    enable: function () {
+        this.theme.enableLabel(this.label);
+        this.value = this.input.value;
+        //去掉遮罩层
+        var spanMini = this.label.nextSibling;
+        var spanMiniCover = spanMini.getElementsByClassName('miniCover')[0];
+        spanMini.removeChild(spanMiniCover);
+
+        this.refreshValue();
+        this.onChange(true);
+        this._super();
+    },
+    disable: function () {
+        this.theme.disableLabel(this.label);
+
+        this.input.value = this.value;
+        this.value = null;
+
+        //添加遮罩层
+        var spanMini = this.label.nextSibling;
+        var spanMiniCover = document.createElement('div');
+        spanMini.appendChild(spanMiniCover);
+        spanMiniCover.className = 'miniCover';
+        spanMiniCover.style.backgroundColor = '#eee';
+        spanMiniCover.style.position = 'absolute';
+        spanMiniCover.style.top = '0';
+        spanMiniCover.style.left = '0';
+        spanMiniCover.style.right = '0';
+        spanMiniCover.style.bottom = '0';
+        spanMiniCover.style.zIndex = 50;
+        spanMiniCover.style.cursor = 'not-allowed';
+
+
+        this.is_dirty = true;
+
+        // this.refreshValue();
+        this.onChange(true);
+        this._super();
+    }
+});
+// minicolor.js ↑
+// acedit.js ↓
+/**
+ * Created by Administrator on 2017/5/25.
+ */
+JSONEditor.defaults.editors.acedit=JSONEditor.AbstractEditor.extend({
+    register: function () {
+        this._super();
+        if (!this.input) return;
+        this.input.setAttribute('name', this.formname);
+    },
+    setValue: function (value, initial, from_template) {
+        var self = this;
+
+        if (this.template && !from_template) {
+            return;
+        }
+
+        if (value === null || typeof value === 'undefined') value = "";
+        else if (typeof value === "object") value = JSON.stringify(value);
+        else if (typeof value !== "string") value = "" + value;
+
+        if (value === this.serialized) return;
+
+        // Sanitize value before setting it
+        var sanitized = this.sanitize(value);
+
+        if (this.input.value === sanitized) {
+            return;
+        }
+
+        this.input.value = sanitized;
+
+        // If using SCEditor, update the WYSIWYG
+       if (this.ace_editor) {
+            this.ace_editor.setValue(sanitized);
+        }
+
+        var changed = from_template || this.getValue() !== value;
+
+        this.refreshValue();
+
+        if (initial) this.is_dirty = false;
+        else if (this.jsoneditor.options.show_errors === "change") this.is_dirty = true;
+
+        if (this.adjust_height) this.adjust_height(this.input);
+
+        // Bubble this setValue to parents if the value changed
+        this.onChange(changed);
+    },
+    sanitize: function (value) {
+        var sanitized=value.replace(/(\n\s?)|(\s{3,})/g,"");
+        return sanitized;
+    },
+    build:function () {
+        var self = this, i;
+        if (!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
+        if (this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+
+        this.format = this.schema.format;
+        this.programe_language=this.schema.programe_language;
+
+
+
+        if (!this.format && this.schema.media && this.schema.media.type) {
+            this.format = this.schema.media.type.replace(/(^(application|text)\/(x-)?(script\.)?)|(-source$)/g, '');
+        }
+        if (!this.format && this.options.default_format) {
+            this.format = this.options.default_format;
+        }
+        if (this.options.format) {
+            this.format = this.options.format;
+        }
+        //判断需要支持的语言类型
+        if ([
+                'actionscript',
+                'batchfile',
+                'bbcode',
+                'c',
+                'c++',
+                'cpp',
+                'coffee',
+                'csharp',
+                'css',
+                'dart',
+                'django',
+                'ejs',
+                'erlang',
+                'golang',
+                'groovy',
+                'handlebars',
+                'haskell',
+                'haxe',
+                'html',
+                'ini',
+                'jade',
+                'java',
+                'javascript',
+                'json',
+                'less',
+                'lisp',
+                'lua',
+                'makefile',
+                'markdown',
+                'matlab',
+                'mysql',
+                'objectivec',
+                'pascal',
+                'perl',
+                'pgsql',
+                'php',
+                'python',
+                'r',
+                'ruby',
+                'sass',
+                'scala',
+                'scss',
+                'smarty',
+                'sql',
+                'stylus',
+                'svg',
+                'twig',
+                'vbscript',
+                'xml',
+                'yaml'
+            ].indexOf(this.programe_language) >= 0
+        ) {
+            this.input_type = this.programe_language;
+            this.source_code = true;
+            this.input = this.theme.getTextareaInput();
+        }
+
+        if (this.options.compact) this.container.className += ' compact';
+
+        var uuid = this.theme.GenNonDuplicateID();
+        this.input = this.draw(uuid);
+        this.run_btn=document.createElement('input');
+        this.run_btn.type='button';
+        this.run_btn.value='RUN';
+
+        this.input
+            .addEventListener('change', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Don't allow changing if this field is a template
+                if (self.schema.template) {
+                    this.value = self.value;
+                    return;
+                }
+
+                var val = this.value;
+
+                // sanitize value
+                var sanitized = self.sanitize(val);
+                if (val !== sanitized) {
+                    this.value = sanitized;
+                }
+
+                self.is_dirty = true;
+
+                self.refreshValue();
+                self.onChange(true);
+            });
+
+        if (this.format) this.input.setAttribute('data-schemaformat', this.format);
+
+        this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
+        this.control.appendChild(this.run_btn);
+        this.container.appendChild(this.control);
+
+
+        // Any special formatting that needs to happen after the input is added to the dom
+        window.requestAnimationFrame(function () {
+            // Skip in case the input is only a temporary editor,
+            // otherwise, in the case of an ace_editor creation,
+            // it will generate an error trying to append it to the missing parentNode
+             self.setupAce();
+            // if (self.adjust_height) self.adjust_height(self.input);
+        });
+
+        // Compile and store the template
+        if (this.schema.template) {
+            this.template = this.jsoneditor.compileTemplate(this.schema.template, this.template_engine);
+            this.refreshValue();
+        }
+        else {
+            this.refreshValue();
+        }
+
+        //设置初始状态
+        this.initstatus(this.label);
+        //监听checkbox
+        this.checkListener();
+
+
+    },
+    initstatus:function (label) {//初始化状态 是否禁用
+        if(this.schema.disable) {
+            this.input.disabled=true;
+            this.theme.disableLabel(label);
+            this.control.firstElementChild.checked=false;
+        }else {
+            this.control.firstElementChild.checked=true;
+        }
+    },
+    enable: function () {
+        if (!this.always_disabled) {
+            this.input.disabled = false;
+            this.run_btn.disabled=false;
+            // TODO: WYSIWYG and Markdown editors
+            if(this.label) this.theme.enableLabel(this.label);
+            this.value=this.input.value;
+        }
+        //去掉遮罩层
+        var spanAce = this.label.nextSibling;
+        var spanAceCover = spanAce.getElementsByClassName('aceCover')[0];
+        spanAce.removeChild(spanAceCover);
+
+        this.refreshValue();
+        this.onChange(true);
+        this._super();
+    },
+    disable: function () {
+        this.input.disabled = true;
+        this.run_btn.disabled=true;
+        // TODO: WYSIWYG and Markdown editors
+        if(this.label) this.theme.disableLabel(this.label);
+        this.value=null;
+
+        //添加遮罩层
+        var spanAce = this.label.nextSibling;
+        var spanAceCover = document.createElement('div');
+        spanAce.appendChild(spanAceCover);
+        spanAceCover.className = 'aceCover';
+        spanAceCover.style.backgroundColor = '#777';
+        spanAceCover.style.opacity = '0.7';
+        spanAceCover.style.position = 'absolute';
+        spanAceCover.style.top = '0';
+        spanAceCover.style.left = '0';
+        spanAceCover.style.right = '0';
+        spanAceCover.style.bottom = '0';
+        spanAceCover.style.zIndex = 50;
+        spanAceCover.style.cursor = 'not-allowed';
+
+
+        //此处为了禁用后input中仍显示之前的值，所以不进行refresh
+
+        this.onChange(true);
+        this._super();
+    },
+    draw:function () {
+        var self=this;
+        this.ace_container = document.createElement('div');
+        this.ace_container.style.width = '100%';
+        this.ace_container.style.position = 'relative';
+        this.ace_container.style.height = '100px';
+        return this.ace_container;
+    },
+    setupAce:function () {
+        var self=this;
+        var mode = this.input_type;
+        this.ace_editor = window.ace.edit(this.ace_container);
+
+        this.ace_editor.setValue(this.sanitize(this.getValue()));
+
+        // The theme
+        if (JSONEditor.plugins.ace.theme) this.ace_editor.setTheme('ace/theme/' + JSONEditor.plugins.ace.theme);
+        // The mode
+        this.ace_editor.getSession().setMode('ace/mode/'+mode);
+
+        // Listen for changes
+        this.ace_editor.on('change', function () {
+            var val = self.ace_editor.getValue();
+            self.input.value = val.replace(/(\n\s?)|(\s{3,})/g,"");
+            self.refreshValue();
+            self.is_dirty = true;
+            self.onChange(true);
+        });
+        this.run_btn
+            .addEventListener('click',function(e){
+                e.preventDefault();
+                e.stopPropagation();
+                var content=self.input.value;
+                // var jsexp='<script>'+content+'<\/script>';
+                var script=document.createElement('script');
+                script.innerHTML=content;
+                document.body.appendChild(script);
+            });
+    },
+    onWatchedFieldChange: function () {
+        var self = this, vars, j;
+
+        // If this editor needs to be rendered by a macro template
+        if (this.template) {
+            vars = this.getWatchedFieldValues();
+            this.setValue(this.template(vars), false, true);
+        }
+
+        this._super();
+    },
+    refreshValue: function () {
+        this.value = this.input.value;
+        if (typeof this.value !== "string") this.value = '';
+        this.serialized = this.value;
+    },
+
+    //checkbox点击监听
+    checkListener: function () {
+        var self = this;
+        var checkboxes = self.control.firstElementChild;
+        checkboxes.addEventListener('change', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.checked) {
+                self.enable();
+            } else {
+                self.disable();
+            }
+        });
+    }
+});
+// acedit.js ↑
+// object.js ↓
 JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return $extend({},this.schema["default"] || {});
@@ -2672,6 +3813,9 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       this.editjson_holder.appendChild(this.editjson_cancel);
 
       // Manage Properties modal
+      // 添加 ↓
+      this.theme.getStyles(this.title, this.schema.styles);
+      // 添加↑
       this.addproperty_holder = this.theme.getModal();
       this.addproperty_list = document.createElement('div');
       this.addproperty_list.style.width = '295px';
@@ -2724,6 +3868,10 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       // Container for child editor area
       this.editor_holder = this.theme.getIndentedPanel();
       this.container.appendChild(this.editor_holder);
+      // 添加 ↓
+      this.theme.getStyles(this.editor_holder, this.schema.styles);
+      // 添加 ↑
+      //子元素的行容器
 
       // Container for rows of child editors
       this.row_container = this.theme.getGridContainer();
@@ -3038,8 +4186,14 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     var result = this._super();
     if(this.jsoneditor.options.remove_empty_properties || this.options.remove_empty_properties) {
       for(var i in result) {
+        /*
         if(result.hasOwnProperty(i)) {
           if(!result[i]) delete result[i];
+        }
+        */
+        //对boolean型进行分离 不进行删除操作
+        if (result.hasOwnProperty(i) &&this.schema.properties.hasOwnProperty(i) &&this.schema.properties[i].hasOwnProperty('type') && this.schema.properties[i].type != 'boolean') {
+          if (!result[i]) delete result[i];
         }
       }
     }
@@ -3053,7 +4207,7 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       if(!this.editors.hasOwnProperty(i)) continue;
       this.value[i] = this.editors[i].getValue();
     }
-    
+
     if(this.adding_property) this.refreshAddProperties();
   },
   refreshAddProperties: function() {
@@ -3225,7 +4379,9 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
     });
   }
 });
+// object.js ↑
 
+// array.js ↓
 JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   getDefault: function() {
     return this.schema["default"] || [];
@@ -3296,7 +4452,11 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
     this.hide_delete_buttons = this.options.disable_array_delete || this.jsoneditor.options.disable_array_delete;
     this.hide_delete_all_rows_buttons = this.hide_delete_buttons || this.options.disable_array_delete_all_rows || this.jsoneditor.options.disable_array_delete_all_rows;
-    this.hide_delete_last_row_buttons = this.hide_delete_buttons || this.options.disable_array_delete_last_row || this.jsoneditor.options.disable_array_delete_last_row;
+    // 2020/4/3 修改 ↓
+    // this.hide_delete_last_row_buttons = this.hide_delete_buttons || this.options.disable_array_delete_last_row || this.jsoneditor.options.disable_array_delete_last_row;
+    // 当disable_array_delete:true时，保留delete_last_row_buttons按钮
+    this.hide_delete_last_row_buttons = this.options.disable_array_delete_last_row || this.jsoneditor.options.disable_array_delete_last_row;
+    // 2020/4/3 修改 ↑
     this.hide_move_buttons = this.options.disable_array_reorder || this.jsoneditor.options.disable_array_reorder;
     this.hide_add_button = this.options.disable_array_add || this.jsoneditor.options.disable_array_add;
   },
@@ -3325,8 +4485,25 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         this.row_holder = this.theme.getTabContentHolder(this.tabs_holder);
 
         this.active_tab = null;
+      } else if (this.schema.format === 'htabs') {
+        // this.theme.getStyles(this.title,this.schema.styles);
+        this.controls = this.theme.getHeaderButtonHolder();
+        this.title.appendChild(this.controls);
+        this.htabs_holder = this.theme.getHTabHolder();
+        this.container.appendChild(this.htabs_holder);
+        this.row_holder = this.theme.getTabContentHolder(this.htabs_holder);
+
+        this.active_tab = null;
       }
-      else {
+      //颜色数组绘制
+      else if (this.schema.items.format === 'minicolor') {
+        this.panel = this.theme.getIndentedPanel();
+        this.container.appendChild(this.panel);
+        this.row_holder = document.createElement('div');
+        this.panel.appendChild(this.row_holder);
+        this.controls = this.theme.getButtonHolder();
+        this.panel.appendChild(this.controls);
+      } else {
         this.panel = this.theme.getIndentedPanel();
         this.container.appendChild(this.panel);
         this.row_holder = document.createElement('div');
@@ -3343,7 +4520,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         this.row_holder = document.createElement('div');
         this.panel.appendChild(this.row_holder);
     }
-
+    this.theme.getStyles(this.title,this.schema.styles);
     // Add controls
     this.addControls();
   },
@@ -3421,7 +4598,13 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       holder = this.theme.getChildEditorHolder();
     }
     else {
+      // holder = this.theme.getIndentedPanel();
+      //增加对颜色format的判断，引用颜色数组模版
+      if (this.schema.items.format === 'minicolor') {
+        holder = this.theme.getIndentedPanelArray();
+      } else {
       holder = this.theme.getIndentedPanel();
+      }
     }
 
     this.row_holder.appendChild(holder);
@@ -3686,6 +4869,18 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       });
 
       self.theme.addTab(self.tabs_holder, self.rows[i].tab);
+    } else if (self.htabs_holder) {
+      self.rows[i].tab_text = document.createElement('span');
+      self.rows[i].tab_text.textContent = self.rows[i].getHeaderText();
+      self.rows[i].tab = self.theme.getHTab(self.rows[i].tab_text);
+      self.rows[i].tab.addEventListener('click', function (e) {
+          self.active_tab = self.rows[i].tab;
+          self.refreshTabs();
+          e.preventDefault();
+          e.stopPropagation();
+      });
+
+      self.theme.addTab(self.htabs_holder, self.rows[i].tab);
     }
     
     var controls_holder = self.rows[i].title_controls || self.rows[i].array_controls;
@@ -3934,6 +5129,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     });
   }
 });
+// array.js ↑
 
 JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
   register: function() {
@@ -4816,6 +6012,7 @@ JSONEditor.defaults.editors["enum"] = JSONEditor.AbstractEditor.extend({
   }
 });
 
+// select.js ↓
 JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     value = this.typecast(value||'');
@@ -4881,7 +6078,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     // Enum options enumerated
     if(this.schema["enum"]) {
       var display = this.schema.options && this.schema.options.enum_titles || [];
-      
+
       $each(this.schema["enum"],function(i,option) {
         self.enum_options[i] = ""+option;
         self.enum_display[i] = ""+(display[i] || option);
@@ -4893,20 +6090,20 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
         self.enum_options.unshift('undefined');
         self.enum_values.unshift(undefined);
       }
-            
+
     }
     // Boolean
     else if(this.schema.type === "boolean") {
       self.enum_display = this.schema.options && this.schema.options.enum_titles || ['true','false'];
       self.enum_options = ['1',''];
       self.enum_values = [true,false];
-      
+
       if(!this.isRequired()){
         self.enum_display.unshift(' ');
         self.enum_options.unshift('undefined');
         self.enum_values.unshift(undefined);
       }
-    
+
     }
     // Dynamic Enum
     else if(this.schema.enumSource) {
@@ -4914,7 +6111,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       this.enum_display = [];
       this.enum_options = [];
       this.enum_values = [];
-      
+
       // Shortcut declaration for using a single array
       if(!(Array.isArray(this.schema.enumSource))) {
         if(this.schema.enumValue) {
@@ -4950,7 +6147,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
           }
         }
       }
-      
+
       // Now, enumSource is an array of sources
       // Walk through this array and fix up the values
       for(i=0; i<this.enumSource.length; i++) {
@@ -4991,10 +6188,15 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       self.onInputChange();
     });
 
-    this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    // this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    this.control = this.theme.getFormControlB3(this.label, this.input, this.description, this);
     this.container.appendChild(this.control);
 
-    this.value = this.enum_values[0];
+    // this.value = this.enum_values[0];
+    //设置初始状态
+    this.initstatus(this.label);
+    //监听checkbox
+    this.checkListener();
   },
   onInputChange: function() {
     var val = this.input.value;
@@ -5042,13 +6244,13 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   },
   onWatchedFieldChange: function() {
     var self = this, vars, j;
-    
+
     // If this editor uses a dynamic select box
     if(this.enumSource) {
       vars = this.getWatchedFieldValues();
       var select_options = [];
       var select_titles = [];
-      
+
       for(var i=0; i<this.enumSource.length; i++) {
         // Constant values
         if(Array.isArray(this.enumSource[i])) {
@@ -5064,7 +6266,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
           } else {
             items = vars[this.enumSource[i].source];
           }
-          
+
           if(items) {
             // Only use a predefined part of the array
             if(this.enumSource[i].slice) {
@@ -5078,12 +6280,12 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
               }
               items = new_items;
             }
-            
+
             var item_titles = [];
             var item_values = [];
             for(j=0; j<items.length; j++) {
               var item = items[j];
-              
+
               // Rendered value
               if(this.enumSource[i].value) {
                 item_values[j] = this.enumSource[i].value({
@@ -5095,7 +6297,7 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
               else {
                 item_values[j] = items[j];
               }
-              
+
               // Rendered title
               if(this.enumSource[i].title) {
                 item_titles[j] = this.enumSource[i].title({
@@ -5108,26 +6310,26 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
                 item_titles[j] = item_values[j];
               }
             }
-            
+
             // TODO: sort
-            
+
             select_options = select_options.concat(item_values);
             select_titles = select_titles.concat(item_titles);
           }
         }
       }
-      
+
       var prev_value = this.value;
-      
+
       this.theme.setSelectOptions(this.input, select_options, select_titles);
       this.enum_options = select_options;
       this.enum_display = select_titles;
       this.enum_values = select_options;
-      
+
       if(this.select2) {
         this.select2.select2('destroy');
       }
-      
+
       // If the previous value is still in the new select options, stick with it
       if(select_options.indexOf(prev_value) !== -1) {
         this.input.value = prev_value;
@@ -5136,12 +6338,12 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       // Otherwise, set the value to the first select option
       else {
         this.input.value = select_options[0];
-        this.value = select_options[0] || "";  
+        this.value = select_options[0] || "";
         if(this.parent) this.parent.onChildEditorChange(this);
         else this.jsoneditor.onChange();
         this.jsoneditor.notifyWatchers(this.path);
       }
-      
+
       this.setupSelect2();
     }
 
@@ -5150,13 +6352,31 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   enable: function() {
     if(!this.always_disabled) {
       this.input.disabled = false;
+      // 添加 ↓
+      if(this.label) this.theme.enableLabel(this.label);
+      if(this.schema.type=='boolean'){
+        this.value=this.input.selectedIndex==1?'true':'';
+      }else {
+        this.value=this.input.value;
+      }
+      // 添加 ↑
       if(this.select2) this.select2.select2("enable",true);
     }
+    // 添加 ↓
+    this.refreshValue();
+    this.onChange(true);
+    // 添加 ↑
     this._super();
   },
   disable: function() {
     this.input.disabled = true;
+    // 添加 ↓
+    this.value=null;
+    if(this.label) this.theme.disableLabel(this.label);
+    // 添加 ↑
     if(this.select2) this.select2.select2("enable",false);
+    this.refreshValue();
+    this.onChange(true);
     this._super();
   },
   destroy: function() {
@@ -5169,8 +6389,39 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     }
 
     this._super();
+  },
+  initstatus: function (label) {//初始化状态 是否禁用
+      if (this.schema.disable) {
+          this.input.disabled = true;
+          this.theme.disableLabel(label);
+          if(this.control.firstElementChild.type=='checkbox'){
+              this.control.firstElementChild.checked = false;
+          }
+      } else {
+          if(this.control.firstElementChild.type=='checkbox'){
+              this.control.firstElementChild.checked = true;
+          }
+      }
+  },
+  //checkbox点击监听
+  checkListener: function () {
+      var self = this;
+      var checkboxes = self.control.firstElementChild;
+      if(checkboxes.type=='checkbox'){
+          checkboxes.addEventListener('change', function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              if (this.checked) {
+                  self.enable();
+              } else {
+                  self.disable();
+              }
+
+          });
+      }
   }
 });
+// select.js ↑
 
 JSONEditor.defaults.editors.selectize = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
@@ -5952,6 +7203,7 @@ JSONEditor.defaults.editors.upload = JSONEditor.AbstractEditor.extend({
   }
 });
 
+// checkbox.js ↓
 JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     this.value = !!value;
@@ -5980,7 +7232,14 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
     if(this.options.compact) this.container.className += ' compact';
 
     this.input = this.theme.getCheckbox();
-    this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    // this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    switch(this.schema.format){
+      case 'switch':
+      this.control = this.theme.getSwitchFormControl(this.label, this.input, this.description,this);
+      break;
+      default:
+      this.control = this.theme.getFormControl(this.label, this.input, this.description);
+    }
 
     if(this.schema.readOnly || this.schema.readonly) {
       this.always_disabled = true;
@@ -5991,6 +7250,10 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
       e.preventDefault();
       e.stopPropagation();
       self.value = this.checked;
+      // 添加 ↓
+      if(self.value) this.setAttribute('data-switch','on');
+      else this.setAttribute('data-switch','off');
+      // 添加 ↑
       self.onChange(true);
     });
 
@@ -6013,6 +7276,7 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
     this._super();
   }
 });
+// checkbox.js ↑
 
 JSONEditor.defaults.editors.arraySelectize = JSONEditor.AbstractEditor.extend({
   build: function() {
@@ -6282,7 +7546,20 @@ JSONEditor.AbstractTheme = Class.extend({
     el.className = 'form-control';
     if(label) el.appendChild(label);
     if(input.type === 'checkbox') {
-      label.insertBefore(input,label.firstChild);
+      // label.insertBefore(input,label.firstChild);
+      var uuid=this.GenNonDuplicateID();
+      input.id=uuid;
+      el.className = 'form-control linkbtn';
+      label.setAttribute('for',uuid);
+      label.style.width='220px';
+      label.style.height='20px';
+      label.style.backgroundColor='#27363d';
+      label.style.cursor='pointer';
+      label.style.textAlign='center';
+      label.style.color='#fff';
+      label.style.userSelect='none';
+      input.style.display='none';
+      el.insertBefore(input, el.firstChild);
     }
     else {
       el.appendChild(input);
@@ -6331,8 +7608,8 @@ JSONEditor.AbstractTheme = Class.extend({
       button.appendChild(icon);
       button.innerHTML += ' ';
     }
-    button.appendChild(document.createTextNode(text));
-    if(title) button.setAttribute('title',title);
+    // button.appendChild(document.createTextNode(text));
+    // if(title) button.setAttribute('title',title);
   },
   getTable: function() {
     return document.createElement('table');
@@ -6456,6 +7733,35 @@ JSONEditor.AbstractTheme = Class.extend({
   createImageLink: function(holder,link,image) {
     holder.appendChild(link);
     link.appendChild(image);
+  },
+  GenNonDuplicateID: function () {
+      var s = [];
+      var hexDigits = "0123456789abcdef";
+      for (var i = 0; i < 36; i++) {
+          s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+      }
+      s[14] = "4"; // bits 12-15 of the time_hi_and_version field to 0010
+      s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); // bits 6-7 of the clock_seq_hi_and_reserved to 01
+      s[8] = s[13] = s[18] = s[23] = "-";
+
+      var uuid = s.join("");
+      return uuid;
+  },
+  getStyles: function (ele, styles) {//自定义内联样式函数
+      if (styles) {
+          if (ele.nodeName == 'H3') {
+              for (var i in styles.title) {
+                  ele.style[i] = styles.title[i];
+              }
+          }
+
+          if (ele.nodeName == 'DIV') {
+              for (var j in styles.border) {
+                  ele.style[j] = styles.border[j];
+              }
+          }
+
+      }
   }
 });
 
@@ -6641,6 +7947,7 @@ JSONEditor.defaults.themes.bootstrap2 = JSONEditor.AbstractTheme.extend({
   }
 });
 
+// bootstrap3.js ↓
 JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
   getSelectInput: function(options) {
     var el = this._super(options);
@@ -6701,10 +8008,72 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
 
     return group;
   },
+  //  自定义布局带checkbox
+  getFormControlB3: function (label, input, description, self) {
+    var group = document.createElement('div');
+    var uuid = self.theme.GenNonDuplicateID();
+
+    if (label && input.type === 'checkbox') {
+        group.className += ' checkbox';
+        label.appendChild(input);
+        group.style.marginTop = '0';
+        group.appendChild(label);
+        input.style.position = 'relative';
+        input.style.cssFloat = 'left';
+    }
+    else {
+        var ck = self.theme.getCheckbox();
+        group.className += ' form-group';
+        if (label) {
+            ck.id = uuid;
+            label.setAttribute('for', uuid);
+            label.className += ' control-label';
+            label.style.lineHeight = 2;
+            label.style.cursor = 'pointer';
+            label.style.userSelect = 'none';
+            group.appendChild(ck);
+            group.appendChild(label);
+        }
+        group.appendChild(input);
+    }
+
+    if (description) group.appendChild(description);
+
+    return group;
+},
+//自定义布局无checkbox 无label 数组颜色专用
+getFormControlB3Array: function (label, input, description, self) {
+  var group = document.createElement('div');
+
+  group.className += ' form-group';
+  // group.style.marginBottom = 0;
+  if (label) {
+    label.className += ' control-label';
+        label.style.lineHeight = 2;
+        label.style.cursor = 'pointer';
+        label.style.userSelect = 'none';
+        label.style.display = 'none';
+        group.appendChild(label);
+  }
+  group.appendChild(input);
+
+  if (description) group.appendChild(description);
+
+    return group;
+},
   getIndentedPanel: function() {
     var el = document.createElement('div');
     el.className = 'well well-sm';
     el.style.paddingBottom = 0;
+    return el;
+  },
+  //颜色组panel
+  getIndentedPanelArray: function () {
+    var el = document.createElement('div');
+    el.className = ' arraycolor';
+    el.style.width = '28px';
+    el.style.height='28px';
+    el.style.marginRight = '5px';
     return el;
   },
   getFormInputDescription: function(text) {
@@ -6726,6 +8095,8 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
   getButton: function(text, icon, title) {
     var el = this._super(text, icon, title);
     el.className += 'btn btn-default';
+    el.style.backgroundColor='transparent';
+        el.style.border='none';
     return el;
   },
   getTable: function() {
@@ -6761,10 +8132,23 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
     el.className = 'rows';
     return el;
   },
+  getHTabHolder: function () {
+    var el = document.createElement('div');
+    el.innerHTML = "<div class='tabs list-group col-md-12 clearpad'></div><div class='col-md-12 well well-sm clearpad'></div>";
+    el.className = 'rows';
+    return el;
+  },
   getTab: function(text) {
     var el = document.createElement('a');
     el.className = 'list-group-item';
     el.setAttribute('href','#');
+    el.appendChild(text);
+    return el;
+  },
+  getHTab: function (text) {
+    var el = document.createElement('a');
+    el.className = 'list-group-item col-md-6';
+    el.setAttribute('href', '#');
     el.appendChild(text);
     return el;
   },
@@ -6808,6 +8192,181 @@ JSONEditor.defaults.themes.bootstrap3 = JSONEditor.AbstractTheme.extend({
     bar.removeAttribute('aria-valuenow');
     bar.style.width = '100%';
     bar.innerHTML = '';
+  }
+});
+// bootstrap3.js ↑
+
+JSONEditor.defaults.themes.bootstrap4 = JSONEditor.AbstractTheme.extend({
+  getSelectInput: function(options) {
+    var el = this._super(options);
+    el.className += "form-control";
+    //el.style.width = 'auto';
+    return el;
+  },
+  setGridColumnSize: function(el, size) {
+    el.className = "col-md-" + size;
+  },
+  afterInputReady: function(input) {
+    if (input.controlgroup) return;
+    input.controlgroup = this.closest(input, ".form-group");
+    if (this.closest(input, ".compact")) {
+      input.controlgroup.style.marginBottom = 0;
+    }
+
+    // TODO: use bootstrap slider
+  },
+  getTextareaInput: function() {
+    var el = document.createElement("textarea");
+    el.className = "form-control";
+    return el;
+  },
+  getRangeInput: function(min, max, step) {
+    // TODO: use better slider
+    return this._super(min, max, step);
+  },
+  getFormInputField: function(type) {
+    var el = this._super(type);
+    if (type !== "checkbox") {
+      el.className += "form-control";
+    }
+    return el;
+  },
+  getFormControl: function(label, input, description) {
+    var group = document.createElement("div");
+
+    if (label && input.type === "checkbox") {
+      group.className += " checkbox";
+      label.appendChild(input);
+      label.style.fontSize = "14px";
+      group.style.marginTop = "0";
+      group.appendChild(label);
+      input.style.position = "relative";
+      input.style.cssFloat = "left";
+    } else {
+      group.className += " form-group";
+      if (label) {
+        label.className += " form-control-label";
+        group.appendChild(label);
+      }
+      group.appendChild(input);
+    }
+
+    if (description) group.appendChild(description);
+
+    return group;
+  },
+  getIndentedPanel: function() {
+    var el = document.createElement("div");
+    el.className = "card card-block bg-faded";
+    el.style.paddingBottom = 0;
+    return el;
+  },
+  getFormInputDescription: function(text) {
+    var el = document.createElement("p");
+    el.className = "form-text";
+    el.innerHTML = text;
+    return el;
+  },
+  getHeaderButtonHolder: function() {
+    var el = this.getButtonHolder();
+    el.style.marginLeft = "10px";
+    return el;
+  },
+  getButtonHolder: function() {
+    var el = document.createElement("div");
+    el.className = "btn-group";
+    return el;
+  },
+  getButton: function(text, icon, title) {
+    var el = this._super(text, icon, title);
+    el.className += "btn btn-secondary";
+    return el;
+  },
+  getTable: function() {
+    var el = document.createElement("table");
+    el.className = "table-bordered table-sm";
+    el.style.width = "auto";
+    el.style.maxWidth = "none";
+    return el;
+  },
+
+  addInputError: function(input, text) {
+    if (!input.controlgroup) return;
+    input.controlgroup.className += " has-error";
+    if (!input.errmsg) {
+      input.errmsg = document.createElement("p");
+      input.errmsg.className = "form-text errormsg";
+      input.controlgroup.appendChild(input.errmsg);
+    } else {
+      input.errmsg.style.display = "";
+    }
+
+    input.errmsg.textContent = text;
+  },
+  removeInputError: function(input) {
+    if (!input.errmsg) return;
+    input.errmsg.style.display = "none";
+    input.controlgroup.className = input.controlgroup.className.replace(
+      /\s?has-error/g,
+      ""
+    );
+  },
+  getTabHolder: function() {
+    var el = document.createElement("div");
+    el.innerHTML =
+      "<div class='tabs list-group col-md-2'></div><div class='col-md-10'></div>";
+    el.className = "rows";
+    return el;
+  },
+  getTab: function(text) {
+    var el = document.createElement("a");
+    el.className = "list-group-item-action";
+    el.setAttribute("href", "#");
+    el.appendChild(text);
+    return el;
+  },
+  markTabActive: function(tab) {
+    tab.className += " active";
+  },
+  markTabInactive: function(tab) {
+    tab.className = tab.className.replace(/\s?active/g, "");
+  },
+  getProgressBar: function() {
+    var min = 0,
+      max = 100,
+      start = 0;
+
+    var container = document.createElement("div");
+    container.className = "progress";
+
+    var bar = document.createElement("div");
+    bar.className = "progress-bar";
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-valuenow", start);
+    bar.setAttribute("aria-valuemin", min);
+    bar.setAttribute("aria-valuenax", max);
+    bar.innerHTML = start + "%";
+    container.appendChild(bar);
+
+    return container;
+  },
+  updateProgressBar: function(progressBar, progress) {
+    if (!progressBar) return;
+
+    var bar = progressBar.firstChild;
+    var percentage = progress + "%";
+    bar.setAttribute("aria-valuenow", progress);
+    bar.style.width = percentage;
+    bar.innerHTML = percentage;
+  },
+  updateProgressBarUnknown: function(progressBar) {
+    if (!progressBar) return;
+
+    var bar = progressBar.firstChild;
+    progressBar.className = "progress progress-striped active";
+    bar.removeAttribute("aria-valuenow");
+    bar.style.width = "100%";
+    bar.innerHTML = "";
   }
 });
 
@@ -7098,7 +8657,10 @@ JSONEditor.defaults.themes.foundation6 = JSONEditor.defaults.themes.foundation5.
   },
 });
 
+// html.js ↓
 JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
+  /*
+  // 调整输入框位置
   getFormInputLabel: function(text) {
     var el = this._super(text);
     el.style.display = 'block';
@@ -7106,6 +8668,7 @@ JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
     el.style.fontWeight = 'bold';
     return el;
   },
+  */
   getFormInputDescription: function(text) {
     var el = this._super(text);
     el.style.fontSize = '.8em';
@@ -7114,6 +8677,7 @@ JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
     el.style.fontStyle = 'italic';
     return el;
   },
+  /*
   getIndentedPanel: function() {
     var el = this._super();
     el.style.border = '1px solid #ddd';
@@ -7122,6 +8686,7 @@ JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
     el.style.borderRadius = '3px';
     return el;
   },
+  */
   getChildEditorHolder: function() {
     var el = this._super();
     el.style.marginBottom = '8px';
@@ -7178,8 +8743,171 @@ JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
   updateProgressBarUnknown: function(progressBar) {
     if (!progressBar) return;
     progressBar.removeAttribute('value');
+  },
+  getSwitchFormControl: function (label, input, description,self) {
+      var group = document.createElement('div');
+      var el = document.createElement('div');
+      var lab=document.createElement('label');
+      group.className = 'form-group';
+      el.className = 'switch';
+      if (label) group.appendChild(label);
+      var uuid=this.GenNonDuplicateID();
+      input.id=uuid;
+      lab.setAttribute('for',uuid);
+      lab.style.userSelect='none';
+      input.style.display='none';
+      if(self.schema.default) input.setAttribute('data-switch','on');
+      else input.setAttribute('data-switch','off');
+      el.appendChild(input);
+      el.appendChild(lab);
+      group.appendChild(el);
+      if (description) group.appendChild(description);
+      return group;
+  },
+  getFormControlB3: function (label, input, description) {
+      var group = document.createElement('div');
+
+      if (label && input.type === 'checkbox') {
+          group.className += ' checkbox';
+          label.appendChild(input);
+          label.style.fontSize = '14px';
+          group.style.marginTop = '0';
+          group.appendChild(label);
+          input.style.position = 'relative';
+          input.style.cssFloat = 'left';
+      }
+      else {
+          group.className += ' form-group';
+          if (label) {
+              label.className += ' control-label';
+              group.appendChild(label);
+          }
+          group.appendChild(input);
+      }
+
+      if (description) group.appendChild(description);
+
+      return group;
+  },
+  getFormControlB3CK: function (label, input, description, self) {
+      var group = document.createElement('div');
+      var uuid = self.theme.GenNonDuplicateID();
+
+      if (label && input.type === 'checkbox') {
+          group.className += ' checkbox';
+          label.appendChild(input);
+          group.style.marginTop = '0';
+          group.appendChild(label);
+          input.style.position = 'relative';
+          input.style.cssFloat = 'left';
+      }
+      else {
+          var ck = self.theme.getCheckbox();
+          group.className += ' form-group';
+          if (label) {
+              ck.id = uuid;
+              label.setAttribute('for', uuid);
+              label.className += ' control-label';
+              label.style.lineHeight = 2;
+              label.style.cursor = 'pointer';
+              label.style.userSelect = 'none';
+              group.appendChild(ck);
+              group.appendChild(label);
+          }
+          group.appendChild(input);
+      }
+
+      if (description) group.appendChild(description);
+
+      return group;
+  },
+  getIndentedPanel: function () {
+      var el = document.createElement('div');
+      el.className = 'v3-base-json-editor__well';
+      el.style.paddingBottom = 0;
+      return el;
+  },
+  //颜色组panel
+  getIndentedPanelArray: function () {
+      var el = document.createElement('div');
+      el.className = ' arraycolor';
+      el.style.width = '28px';
+      el.style.height='28px';
+      el.style.marginRight = '5px';
+      return el;
+  },
+  //自定义布局无checkbox 无label 数组颜色专用
+  getFormControlB3Array: function (label, input, description, self) {
+      var group = document.createElement('div');
+
+      group.className += ' form-group';
+      // group.style.marginBottom = 0;
+      if (label) {
+          label.className += ' control-label';
+          label.style.lineHeight = 2;
+          label.style.cursor = 'pointer';
+          label.style.userSelect = 'none';
+          label.style.display = 'none';
+          group.appendChild(label);
+      }
+      group.appendChild(input);
+
+      if (description) group.appendChild(description);
+
+      return group;
+  },
+  getHTabHolder: function () {
+      var el = document.createElement('div');
+      el.innerHTML = "<div class='tabs list-group col-md-12 clearpad'></div><div class='col-md-12 well well-sm clearpad'></div>";
+      el.className = 'rows';
+      return el;
+  },
+  getHTab: function (text) {
+      var el = document.createElement('a');
+      el.className = 'list-group-item col-md-6';
+      el.setAttribute('href', '#');
+      el.appendChild(text);
+      return el;
+  },
+  setGridColumnSize: function (el, size) {
+      el.className = 'col-md-' + size;
+  },
+  getSelectInput: function (options) {
+      var el = this._super(options);
+      el.className += 'form-control';
+      //el.style.width = 'auto';
+      return el;
+  },
+  getTextareaInput: function () {
+      var el = document.createElement('textarea');
+      el.className = 'form-control';
+      return el;
+  },
+  getFormInputField: function (type) {
+      var el = this._super(type);
+      if (type !== 'checkbox') {
+          el.className += 'form-control';
+      }
+      return el;
+  },
+  afterInputReady: function (input) {
+      if (input.controlgroup) return;
+      input.controlgroup = this.closest(input, '.form-group');
+      if (this.closest(input, '.compact')) {
+          input.controlgroup.style.marginBottom = 0;
+      }
+
+      // TODO: use bootstrap slider
+  },
+  getButton: function (text, icon, title) {
+      var el = this._super(text, icon, title);
+      el.className += 'btn btn-default';
+      el.style.backgroundColor='transparent';
+      el.style.border='none';
+      return el;
   }
 });
+// html.js ↑
 
 JSONEditor.defaults.themes.jqueryui = JSONEditor.AbstractTheme.extend({
   getTable: function() {
@@ -7663,6 +9391,7 @@ JSONEditor.defaults.templates.underscore = function() {
   };
 };
 
+// defaults.js ↓
 // Set the default theme
 JSONEditor.defaults.theme = 'html';
 
@@ -7676,17 +9405,17 @@ JSONEditor.defaults.options = {};
 JSONEditor.defaults.translate = function(key, variables) {
   var lang = JSONEditor.defaults.languages[JSONEditor.defaults.language];
   if(!lang) throw "Unknown language "+JSONEditor.defaults.language;
-  
+
   var string = lang[key] || JSONEditor.defaults.languages[JSONEditor.defaults.default_language][key];
-  
+
   if(typeof string === "undefined") throw "Unknown translate string "+key;
-  
+
   if(variables) {
     for(var i=0; i<variables.length; i++) {
       string = string.replace(new RegExp('\\{\\{'+i+'}}','g'),variables[i]);
     }
   }
-  
+
   return string;
 };
 
@@ -7874,17 +9603,42 @@ JSONEditor.plugins = {
   ace: {
     theme: ''
   },
-  epiceditor: {
+  SimpleMDE: {
 
   },
   sceditor: {
 
   },
   select2: {
-    
+
   },
   selectize: {
-  }
+  },
+  colorpicker:{},
+  checkboxradio:{},
+    minicolor:{
+        animationSpeed: 50,
+        animationEasing: 'swing',
+        change: null,
+        changeDelay: 0,
+        control: 'hux',
+        defaultValue: '#ff6161',
+        format: 'hex',
+        hide: null,
+        hideSpeed: 300,
+        inline: false,
+        keywords: 'transparent',
+        letterCase: 'lowercase',
+        opacity: false,
+        position: 'bottom left',
+        show: null,
+        showSpeed: 300,
+        theme: 'bootstrap',
+        swatches: [
+            '#ef9a9a','#90caf9','#a5d6a7','#fff59d','#ffcc80','#bcaaa4','transparent'
+        ],
+
+    }
 };
 
 // Default per-editor options
@@ -7911,7 +9665,8 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
 JSONEditor.defaults.resolvers.unshift(function(schema) {
   if(schema.type === 'boolean') {
     // If explicitly set to 'checkbox', use that
-    if(schema.format === "checkbox" || (schema.options && schema.options.checkbox)) {
+    // if(schema.format === "checkbox" || (schema.options && schema.options.checkbox)) {
+    if (schema.format === "checkbox" || schema.format === "switch" || (schema.options && schema.options.checkbox)) {
       return "checkbox";
     }
     // Otherwise, default to select menu
@@ -7943,6 +9698,34 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
     return "table";
   }
 });
+//第三步：添加解析器
+//扩展
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if (schema.type === 'integer' && schema.format === "rating") return "rating";
+});
+//颜色
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if (schema.type === 'string' && schema.format === "colorpicker") return "colorpicker";
+});
+
+//jQueryui-checkboxradio
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&& schema.format==="checkboxradio") return "checkboxradio";
+});
+
+//jpicker
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&&schema.format==="jpicker") return "jpicker";
+});
+//minicolor
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&&schema.format==="minicolor") return "minicolor";
+});
+//ace代码编辑器
+JSONEditor.defaults.resolvers.unshift(function (schema) {
+  if(schema.type==='string'&&schema.format==='acedit') return "acedit";
+});
+
 // Use the `select` editor for dynamic enumSource enums
 JSONEditor.defaults.resolvers.unshift(function(schema) {
   if(schema.enumSource) return (JSONEditor.plugins.selectize.enable) ? 'selectize' : 'select';
@@ -7976,6 +9759,7 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
   // If this schema uses `oneOf` or `anyOf`
   if(schema.oneOf || schema.anyOf) return "multiple";
 });
+// defaults.js ↑
 
 /**
  * This is a small wrapper for using JSON Editor like a typical jQuery plugin.
@@ -8042,7 +9826,15 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
   }
 })();
 
-  window.JSONEditor = JSONEditor;
+// outro.js ↓
+/*
+window.JSONEditor = JSONEditor;
 })();
+*/
+// 2020/4/2 添加 ↓
+return JSONEditor;
+}));
+// 2020/4/2 添加 ↑
+// outro.js ↑
 
 //# sourceMappingURL=jsoneditor.js.map

@@ -1,4 +1,4 @@
-// checkbox.js ¡ý
+// checkbox.js â†“
 JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     this.value = !!value;
@@ -45,10 +45,10 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
       e.preventDefault();
       e.stopPropagation();
       self.value = this.checked;
-      // Ìí¼Ó ¡ý
+      // æ·»åŠ  â†“
       if(self.value) this.setAttribute('data-switch','on');
       else this.setAttribute('data-switch','off');
-      // Ìí¼Ó ¡ü
+      // æ·»åŠ  â†‘
       self.onChange(true);
     });
 
@@ -71,4 +71,4 @@ JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
     this._super();
   }
 });
-// checkbox.js ¡ü
+// checkbox.js â†‘
