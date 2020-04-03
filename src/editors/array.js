@@ -1,5 +1,14 @@
 // array.js ↓
 JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
+  askConfirmation: function() {
+    console.log('banana');
+    if (this.jsoneditor.options.prompt_before_delete === true) {
+      if (confirm("Are you sure you want to remove this node?") === false) {
+        return false;
+      }
+    }
+    return true;
+  },
   getDefault: function() {
     return this.schema["default"] || [];
   },
@@ -534,10 +543,8 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         e.preventDefault();
         e.stopPropagation();
 
-        if (self.jsoneditor.options.prompt_before_delete === true) {
-          if (confirm("Confirm to remove.") === false) {
-            return false;
-          }
+        if (!self.askConfirmation()) {
+          return false;
         }
 
         var i = this.getAttribute('data-i')*1;
@@ -730,10 +737,8 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       e.preventDefault();
       e.stopPropagation();
 
-      if (self.jsoneditor.options.prompt_before_delete === true) {
-        if (confirm("Confirm to remove.") === false) {
-          return false;
-        }
+      if (!self.askConfirmation()) {
+        return false;
       }
 
       var rows = self.getValue();
@@ -756,10 +761,8 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       e.preventDefault();
       e.stopPropagation();
 
-      if (self.jsoneditor.options.prompt_before_delete === true) {
-        if (confirm("Confirm to remove.") === false) {
-          return false;
-        }
+      if (!self.askConfirmation()) {
+        return false;
       }
 
       self.setValue([]);
