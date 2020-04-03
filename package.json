@@ -33,7 +33,7 @@
     "node": ">= 0.8.0"
   },
   "devDependencies": {
-    "chromedriver": "^2.36.0",
+    "chromedriver": "^2.46.0",
     "grunt": "^1.0.2",
     "grunt-contrib-concat": "~1.0.0",
     "grunt-contrib-connect": "~1.0.0",
