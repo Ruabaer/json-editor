@@ -15,17 +15,18 @@
 
 // (function() {
 // 2020/4/2 添加 ↓
-(function(root,factory){
-    if (typeof define === 'function' && define.amd) {
-        // AMD. Register as an anonymous module.
-        define(['jquery'], factory);
-    } else if (typeof exports === 'object') {
-        // Node/CommonJS
-        module.exports = factory(require('jquery'));
-    } else {
-        // Browser globals
-        root.JSONEditor=factory(root.jQuery);
-    }
+;(function(global,factory){
+  "use strict";
+  if (typeof module === "object" && module != null && module.exports) {
+    // Node/CommonJS
+    module.exports = factory(require('jquery'));
+  } else if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals
+    global.JSONEditor=factory(global.jQuery);
+  }
 }(this,function(jQuery) {
 // 2020/4/2 添加  ↑
 // intro.js ↑

@@ -109,7 +109,11 @@ module.exports = function(grunt) {
         nonbsp: true,
         nonew: true,
         immed: true,
-        latedef: true
+        latedef: true,
+        globals: {
+            "module": true,
+            "define": true,
+        }
       },
       beforeconcat: [
         'src/class.js',
