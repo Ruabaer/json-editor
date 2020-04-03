@@ -1,4 +1,4 @@
-// select.js ¡ý
+// select.js ↓
 JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
     value = this.typecast(value||'');
@@ -14,7 +14,12 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     }
 
     this.input.value = this.enum_options[this.enum_values.indexOf(sanitized)];
-    if(this.select2) this.select2.select2('val',this.input.value);
+    if(this.select2) {
+      if(this.select2v4)
+        this.select2.val(this.input.value).trigger("change"); 
+      else
+        this.select2.select2('val',this.input.value);
+    }
     this.value = sanitized;
     this.onChange();
     this.change();
@@ -213,13 +218,24 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       var options = $extend({},JSONEditor.plugins.select2);
       if(this.schema.options && this.schema.options.select2_options) options = $extend(options,this.schema.options.select2_options);
       this.select2 = window.jQuery(this.input).select2(options);
+      this.select2v4 = this.select2.select2.hasOwnProperty("amd");
+
       var self = this;
       this.select2.on('select2-blur',function() {
-        self.input.value = self.select2.select2('val');
+        if(self.select2v4)
+          self.input.value = self.select2.val();
+        else
+          self.input.value = self.select2.select2('val');
+
         self.onInputChange();
       });
+
       this.select2.on('change',function() {
-        self.input.value = self.select2.select2('val');
+        if(self.select2v4)
+          self.input.value = self.select2.val();
+        else
+          self.input.value = self.select2.select2('val');
+
         self.onInputChange();
       });
     }
@@ -349,23 +365,34 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       }else {
         this.value=this.input.value;
       }
-      // Ìí¼Ó ¡ü
-      if(this.select2) this.select2.select2("enable",true);
+      // 添加 ↑
+      if(this.select2) {
+        if(this.select2v4)
+          this.select2.prop("disabled",false);
+        else
+          this.select2.select2("enable",true);
+      }
     }
-    // Ìí¼Ó ¡ý
+
     this.refreshValue();
     this.onChange(true);
-    // Ìí¼Ó ¡ü
+    
     this._super();
   },
   disable: function(always_disabled) {
     if(always_disabled) this.always_disabled = true;
     this.input.disabled = true;
-    // Ìí¼Ó ¡ý
+    // 
     this.value=null;
     if(this.label) this.theme.disableLabel(this.label);
-    // Ìí¼Ó ¡ü
-    if(this.select2) this.select2.select2("enable",false);
+    // 
+    if(this.select2) {
+      if(this.select2v4)
+        this.select2.prop("disabled",true);
+      else
+        this.select2.select2("enable",false);
+    }
+    
     this.refreshValue();
     this.onChange(true);
     this._super();
@@ -412,4 +439,4 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       }
   }
 });
-// select.js ¡ü
+// select.js ↑
