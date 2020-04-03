@@ -372,4 +372,7 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
   // If this schema uses `oneOf` or `anyOf`
   if(schema.oneOf || schema.anyOf) return "multiple";
 });
-// defaults.js ↑
+// Use a specialized editor for starratings
+JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if (schema.type === "string" && schema.format === "starrating") return "starrating";
+});
