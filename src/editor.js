@@ -456,8 +456,13 @@ JSONEditor.AbstractEditor = Class.extend({
   },
   getDefault: function() {
     if (!this.schema.disable) {
-    if(this.schema["default"]) return this.schema["default"];
-    if(this.schema["enum"]) return this.schema["enum"][0];
+      if (typeof this.schema["default"] !== 'undefined') {
+        return this.schema["default"];
+      }
+
+      if (typeof this.schema["enum"] !== 'undefined') {
+        return this.schema["enum"][0];
+      }
       if (this.schema.format=="minicolor") return JSONEditor.plugins.minicolor.defaultValue;
     }
     
