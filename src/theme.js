@@ -475,5 +475,8 @@ JSONEditor.AbstractTheme = Class.extend({
           }
 
       }
+  },
+  getInputGroup: function(input, buttons) {
+    return undefined;
   }
 });

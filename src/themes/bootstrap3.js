@@ -331,6 +331,23 @@ getFormControlB3Array: function (label, input, description, self) {
     bar.removeAttribute('aria-valuenow');
     bar.style.width = '100%';
     bar.innerHTML = '';
+  },
+  getInputGroup: function(input, buttons) {
+    if (!input) return;
+
+    var inputGroupContainer = document.createElement('div');
+    inputGroupContainer.className = 'input-group';
+    inputGroupContainer.appendChild(input);
+
+    var inputGroup = document.createElement('div');
+    inputGroup.className = 'input-group-btn';
+    inputGroupContainer.appendChild(inputGroup);
+
+    for(var i=0;i<buttons.length;i++) {
+      inputGroup.appendChild(buttons[i]);
+    }
+
+    return inputGroupContainer;
   }
 });
 // bootstrap3.js ↑
