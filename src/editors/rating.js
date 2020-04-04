@@ -74,11 +74,11 @@ JSONEditor.defaults.editors.rating = JSONEditor.defaults.editors.integer.extend(
       this.container.appendChild(this.input);
 
       var ratingContainer = document.createElement('div');
-      ratingContainer.className = 'rating-container';
+    ratingContainer.classList.add('rating-container');
 
       var group = document.createElement('div');
       group.setAttribute('name', this.formname);
-      group.className = 'rating';
+    group.classList.add('rating');
       ratingContainer.appendChild(group);
 
       if (this.options.compact) this.container.setAttribute('class', this.container.getAttribute('class') + ' compact');
