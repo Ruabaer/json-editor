@@ -959,12 +959,14 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
       for (var i in result) {
         /*
         if(result.hasOwnProperty(i)) {
-          if(typeof result[i] === 'undefined' || result[i] === '' || Object.keys(result[i]).length == 0 && result[i].constructor == Object) delete result[i];
+          if (typeof result[i] === 'undefined' || result[i] === '' || result[i] === Object(result[i]) && Object.keys(result[i]).length == 0 && result[i].constructor == Object) { 
+            delete result[i];
+          }
         }
         */
         //对boolean型进行分离 不进行删除操作
-        if (result.hasOwnProperty(i) &&this.schema.properties.hasOwnProperty(i) &&this.schema.properties[i].hasOwnProperty('type') && this.schema.properties[i].type != 'boolean') {
-          if (!result[i]) delete result[i];
+        if (result.hasOwnProperty(i) && this.schema.properties.hasOwnProperty(i) && this.schema.properties[i].hasOwnProperty('type') && this.schema.properties[i].type != 'boolean') {
+          }
         }
       }
     }
