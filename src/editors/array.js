@@ -580,6 +580,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         }
 
         self.onChange(true);
+        self.jsoneditor.trigger('deleteRow');
       });
 
       if(controls_holder) {
@@ -635,13 +636,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
         self.onChange(true);
 
-        self.jsoneditor.trigger('move');
-
-        // TODO we can remove this eventually
-        self.rows.forEach(function (row) {
-          row.onMove();
-        });
-
+        self.jsoneditor.trigger('moveRow');
       });
 
       if(controls_holder) {
@@ -669,12 +664,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         self.refreshTabs();
         self.onChange(true);
 
-        self.jsoneditor.trigger('move');
-
-        // TODO we can remove this eventually
-        self.rows.forEach(function (row) {
-          row.onMove();
-        });
+        self.jsoneditor.trigger('moveRow');
       });
 
       if(controls_holder) {
@@ -749,6 +739,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       self.refreshTabs();
       self.refreshValue();
       self.onChange(true);
+      self.jsoneditor.trigger('addRow');
     });
     self.controls.appendChild(this.add_row_button);
 
@@ -779,6 +770,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }
 
       self.onChange(true);
+      self.jsoneditor.trigger('deleteRow');
     });
     self.controls.appendChild(this.delete_last_row_button);
 
@@ -795,6 +787,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       self.empty(true);
       self.setValue([]);
       self.onChange(true);
+      self.jsoneditor.trigger('deleteAllRows');
     });
     self.controls.appendChild(this.remove_all_rows_button);
 
