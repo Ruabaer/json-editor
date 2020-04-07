@@ -39,6 +39,7 @@ module.exports = function(grunt) {
           'src/core.js',
 
           // JSON Schema validator
+          'src/validators/*.js',
           'src/validator.js',
 
           // All the editors
@@ -150,6 +151,7 @@ module.exports = function(grunt) {
         'src/core.js',
 
         // JSON Schema validator
+        'src/validators/*.js',
         'src/validator.js',
 
         // All the editors
