@@ -6,16 +6,28 @@ JSONEditor.AbstractEditor = Class.extend({
     this.onChange(true);
   },
   notify: function() {
+    if(!this.jsoneditor){
+      return;
+    }
     if(this.path) this.jsoneditor.notifyWatchers(this.path);
   },
+  /*
   change: function() {
     if(this.parent) this.parent.onChildEditorChange(this);
     else if(this.jsoneditor) this.jsoneditor.onChange();
   },
+  */
+  change: function (newVal,key,path) {
+    if (this.parent) {
+        this.jsoneditor.onChange(newVal,key,path);
+        this.parent.onChildEditorChange(this);
+    }
+  },
   onChange: function(bubble) {
     this.notify();
     if(this.watch_listener) this.watch_listener();
-    if(bubble) this.change();
+    // if(bubble) this.change();
+    if (bubble) this.change(this.value,this.key,this.path);
   },
   register: function() {
     this.jsoneditor.registerEditor(this);
@@ -442,12 +454,15 @@ JSONEditor.AbstractEditor = Class.extend({
     this.parent = null;
   },
   getDefault: function() {
-    if (typeof this.schema["default"] !== 'undefined') {
-      return this.schema["default"];
-    }
+    if (!this.schema.disable) {
+      if (typeof this.schema["default"] !== 'undefined') {
+        return this.schema["default"];
+      }
 
-    if (typeof this.schema["enum"] !== 'undefined') {
-      return this.schema["enum"][0];
+      if (typeof this.schema["enum"] !== 'undefined') {
+        return this.schema["enum"][0];
+      }
+      if (this.schema.format=="minicolor") return JSONEditor.plugins.minicolor.defaultValue;
     }
     
     var type = this.schema.type || this.schema.oneOf;
