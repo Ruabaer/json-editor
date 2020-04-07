@@ -66,5 +66,7 @@
     "standard": "^11.0.1",
     "watchify": "^3.11.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "acorn": "^7.1.1"
+  }
 }

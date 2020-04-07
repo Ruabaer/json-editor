@@ -1,9 +1,8 @@
-// html.js ↓
 JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
   /*
   // 调整输入框位置
-  getFormInputLabel: function(text) {
-    var el = this._super(text);
+  getFormInputLabel: function(text, req) {
+    var el = this._super(text, req);
     el.style.display = 'block';
     el.style.marginBottom = '3px';
     el.style.fontWeight = 'bold';
@@ -30,7 +29,7 @@ JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
   */
   getTopIndentedPanel: function() {
     return this.getIndentedPanel();
-  },  
+  },
   getChildEditorHolder: function() {
     var el = this._super();
     el.style.marginBottom = '8px';
@@ -251,4 +250,3 @@ JSONEditor.defaults.themes.html = JSONEditor.AbstractTheme.extend({
       return el;
   }
 });
-// html.js ↑
