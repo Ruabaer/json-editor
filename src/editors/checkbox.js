@@ -1,9 +1,11 @@
 // checkbox.js ↓
 JSONEditor.defaults.editors.checkbox = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
-    this.value = !!value;
+    value = !!value;
+    var changed = this.getValue() !== value;
+    this.value = value;
     this.input.checked = this.value;
-    this.onChange();
+    this.onChange(changed);
   },
   register: function() {
     this._super();
