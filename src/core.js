@@ -487,7 +487,7 @@ JSONEditor.prototype = {
       callback();
     }
   },
-  expandRefs: function(schema) {
+  expandRefs: function(schema, recurseAllOf) {
     schema = $extend({},schema);
     
     while (schema.$ref) {
@@ -499,6 +499,17 @@ JSONEditor.prototype = {
       }
       var ref = fetchUrl + refObj.$ref;
       if(!this.refs[ref]) ref = fetchUrl + decodeURIComponent(refObj.$ref);
+      if( recurseAllOf )
+      {
+        if( this.refs[ref].hasOwnProperty("allOf"))
+        {
+          var allOf = this.refs[ref].allOf;
+          for(var i = 0; i<allOf.length; i++)
+          {
+            allOf[i]=this.expandRefs(allOf[i], true);
+          }
+        }
+      }
       schema = this.extendSchemas(schema, $extend({},this.refs[ref]));
     }
     return schema;
@@ -562,6 +573,7 @@ JSONEditor.prototype = {
     // allOf schemas should be merged into the parent
     if(schema.allOf) {
       for(i=0; i<schema.allOf.length; i++) {
+        schema.allOf[i] = this.expandRefs(schema.allOf[i], true);
         extended = this.extendSchemas(extended,this.expandSchema(schema.allOf[i]));
       }
       delete extended.allOf;
