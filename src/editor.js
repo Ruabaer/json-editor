@@ -225,8 +225,7 @@ JSONEditor.AbstractEditor = Class.extend({
       }
     }
   },
-  
-  
+  onMove: function() {},
   getButton: function(text, icon, title) {
     var btnClass = 'json-editor-btn-'+icon;
     if(!this.iconlib) icon = null;
