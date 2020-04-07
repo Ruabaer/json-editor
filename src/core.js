@@ -1,4 +1,3 @@
-// core.js ↓
 var JSONEditor = function(element,options) {
   if (!(element instanceof Element)) {
     throw new Error('element should be an instance of Element');
@@ -159,13 +158,13 @@ JSONEditor.prototype = {
     return this;
   },
   /*
-  trigger: function(event) {
+  trigger: function(event, editor) {
     if(this.callbacks && this.callbacks[event] && this.callbacks[event].length) {
       for(var i=0; i<this.callbacks[event].length; i++) {
-        this.callbacks[event][i].apply(this, []);
+        this.callbacks[event][i].apply(this, [editor]);
       }
     }
-
+    
     return this;
   },
   */
@@ -221,30 +220,30 @@ JSONEditor.prototype = {
   /*
   onChange: function() {
     if(!this.ready) return;
-
+    
     if(this.firing_change) return;
     this.firing_change = true;
-
+    
     var self = this;
-
+    
     window.requestAnimationFrame(function() {
       self.firing_change = false;
       if(!self.ready) return;
 
       // Validate and cache results
       self.validation_results = self.validator.validate(self.root.getValue());
-
+      
       if(self.options.show_errors !== "never") {
         self.root.showValidationErrors(self.validation_results);
       }
       else {
         self.root.showValidationErrors([]);
       }
-
+      
       // Fire change event
       self.trigger('change');
     });
-
+    
     return this;
   },
   */
@@ -681,4 +680,3 @@ JSONEditor.defaults = {
   resolvers: [],
   custom_validators: []
 };
-// core.js ↑

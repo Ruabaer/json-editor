@@ -398,9 +398,11 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         self.rows[i].container.style.display = '';
         if(self.rows[i].tab) self.rows[i].tab.style.display = '';
         self.rows[i].register();
+        self.jsoneditor.trigger('addRow', self.rows[i]);
       }
       else {
-        self.addRow(val,initial);
+        var editor = self.addRow(val,initial);
+        self.jsoneditor.trigger('addRow', editor);
       }
     });
 
@@ -587,7 +589,8 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
           }
         });
 
-        self.empty(true);
+        var editor = self.rows[i];
+
         self.setValue(newval);
 
         if (self.rows[i]) {
@@ -602,7 +605,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         }
 
         self.onChange(true);
-        self.jsoneditor.trigger('deleteRow');
+        self.jsoneditor.trigger('deleteRow', editor);
       });
 
       if(controls_holder) {
@@ -610,30 +613,29 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }
     }
 
-	//Button to copy an array element and add it as last element
-	if(self.show_copy_button){
-        self.rows[i].copy_button = this.getButton(self.getItemTitle(),'copy','Copy '+self.getItemTitle());
-        self.rows[i].copy_button.classList.add('copy', 'json-editor-btntype-copy');
-        self.rows[i].copy_button.setAttribute('data-i',i);
-        self.rows[i].copy_button.addEventListener('click',function(e) {
-            var value = self.getValue();
-            e.preventDefault();
-            e.stopPropagation();
-            var i = this.getAttribute('data-i')*1;
+	  //Button to copy an array element and add it as last element
+    if(self.show_copy_button){
+      self.rows[i].copy_button = this.getButton(self.getItemTitle(),'copy','Copy '+self.getItemTitle());
+      self.rows[i].copy_button.classList.add('copy', 'json-editor-btntype-copy');
+      self.rows[i].copy_button.setAttribute('data-i',i);
+      self.rows[i].copy_button.addEventListener('click',function(e) {
+          var value = self.getValue();
+          e.preventDefault();
+          e.stopPropagation();
+          var i = this.getAttribute('data-i')*1;
 
-            $each(value,function(j,row) {
-              if(j===i) {
-                value.push(row);
-              }
-            });
+          $each(value,function(j,row) {
+            if(j===i) {
+              value.push(row);
+            }
+          });
 
-            self.setValue(value);
-            self.refreshValue(true);
-            self.onChange(true);
+          self.setValue(value);
+          self.refreshValue(true);
+          self.onChange(true);
+      });
 
-        });
-
-        controls_holder.appendChild(self.rows[i].copy_button);
+      controls_holder.appendChild(self.rows[i].copy_button);
     }
 
 
@@ -658,7 +660,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
         self.onChange(true);
 
-        self.jsoneditor.trigger('moveRow');
+        self.jsoneditor.trigger('moveRow', self.rows[i-1]);
       });
 
       if(controls_holder) {
@@ -686,7 +688,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
         self.refreshTabs();
         self.onChange(true);
 
-        self.jsoneditor.trigger('moveRow');
+        self.jsoneditor.trigger('moveRow', self.rows[i+1]);
       });
 
       if(controls_holder) {
@@ -696,6 +698,8 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
 
     if(value) self.rows[i].setValue(value, initial);
     self.refreshTabs();
+
+    return self.rows[i];
   },
   addControls: function() {
     var self = this;
@@ -747,21 +751,22 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       e.preventDefault();
       e.stopPropagation();
       var i = self.rows.length;
+      var editor;
       if(self.row_cache[i]) {
-        self.rows[i] = self.row_cache[i];
+        editor = self.rows[i] = self.row_cache[i];
         self.rows[i].setValue(self.rows[i].getDefault(), true);
         self.rows[i].container.style.display = '';
         if(self.rows[i].tab) self.rows[i].tab.style.display = '';
         self.rows[i].register();
       }
       else {
-        self.addRow();
+        editor = self.addRow();
       }
       self.active_tab = self.rows[i].tab;
       self.refreshTabs();
       self.refreshValue();
       self.onChange(true);
-      self.jsoneditor.trigger('addRow');
+      self.jsoneditor.trigger('addRow', editor);
     });
     self.controls.appendChild(this.add_row_button);
 
@@ -778,8 +783,8 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       var rows = self.getValue();
       var new_active_tab = null;
 
-      rows.pop();
-      self.empty(true);
+      var editor = rows.pop();
+
       self.setValue(rows);
 
       if (self.rows[self.rows.length-1]) {
@@ -792,7 +797,7 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }
 
       self.onChange(true);
-      self.jsoneditor.trigger('deleteRow');
+      self.jsoneditor.trigger('deleteRow', editor);
     });
     self.controls.appendChild(this.delete_last_row_button);
 
