@@ -443,3 +443,7 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
     }
   }
 });
+// Enable custom editor type
+JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if (schema.type === "string" && schema.format === "uuid") return "uuid";
+});
