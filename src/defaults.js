@@ -213,6 +213,10 @@ JSONEditor.defaults.languages.en = {
     */
   button_move_up_title: "Move up",
   /**
+    * Title on Object Properties buttons
+    */
+  button_object_properties: "Object Properties",
+  /**
     * Title on Delete Row buttons
     * @variable This key takes one variable: The title of object to delete
     */
