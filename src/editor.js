@@ -106,7 +106,7 @@ JSONEditor.AbstractEditor = Class.extend({
   },
   checkDependency: function(path, choices) {
     var wrapper = this.container || this.control;
-    if (this.path === path || !wrapper || this.jsoneditor === null) {   
+    if (this.path === path || !wrapper || this.jsoneditor === null) {
       return;
     }
 
@@ -144,7 +144,7 @@ JSONEditor.AbstractEditor = Class.extend({
       this.dependenciesFulfilled = value === choices;
     } else if (typeof choices === 'boolean') {
       if (choices) {
-        this.dependenciesFulfilled = value && value.length > 0;
+        this.dependenciesFulfilled = value || value.length > 0;
       } else {
         this.dependenciesFulfilled = !value || value.length === 0;
       }
