@@ -260,6 +260,7 @@ JSONEditor.defaults.languages.en = {
 };
 
 // Miscellaneous Plugin Settings
+// Obsolete - Can be removed. Now replaced with global + schema options
 JSONEditor.plugins = {
   ace: {
     theme: ''
@@ -304,6 +305,11 @@ JSONEditor.plugins = {
     }
 };
 
+// Global callback list
+JSONEditor.defaults.callbacks = {
+
+};
+
 // Default per-editor options
 $each(JSONEditor.defaults.editors, function(i,editor) {
   JSONEditor.defaults.editors[i].options = editor.options || {};
@@ -337,10 +343,16 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
       return "checkbox";
     }
     // Otherwise, default to select menu
-    if (window.Choices) {
+    if(schema.format === "select2") {
+      return "select2";
+    }
+    if(schema.format === "selectize") {
+      return "selectize";
+    }
+    if(schema.format === "choices") {
       return 'choices';
     }
-    return (JSONEditor.plugins.selectize.enable) ? 'selectize' : 'select';
+    return 'select';
   }
 });
 // Use the multiple editor for schemas where the `type` is set to "any"
@@ -402,10 +414,17 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
     if(schema.format === "radio") {
       return "radio";
     }
-    if (window.Choices) {
+    if(schema.format === "select2") {
+      return "select2";
+    }
+
+    if(schema.format === "selectize") {
+      return "selectize";
+    }
+    if(schema.format === "choices") {
       return 'choices';
     }
-    return (JSONEditor.plugins.selectize.enable) ? 'selectize' : 'select';
+    return 'select';
   }
 });
 // Use the `enum` or `select` editors for schemas with enumerated properties
@@ -420,28 +439,33 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
         return "radio";
       }
 
-      if (window.Choices) {
+      if(schema.format === "select2") {
+        return "select2";
+      }
+
+      if(schema.format === "selectize") {
+        return "selectize";
+      }
+
+      if(schema.format === "choices") {
         return 'choices';
       }
-      return (JSONEditor.plugins.selectize.enable) ? 'selectize' : 'select';
+      return 'select';
+      //return (JSONEditor.plugins.selectize.enable) ? 'selectize' : 'select';
     }
   }
 });
 // Specialized editors for arrays of strings
 JSONEditor.defaults.resolvers.unshift(function(schema) {
   if(schema.type === "array" && schema.items && !(Array.isArray(schema.items)) && ['string','number','integer'].indexOf(schema.items.type) >= 0) {
-    if (window.Choices) {
+    if (schema.format === "choices") {
       return 'arrayChoices';
     }
     if (schema.uniqueItems) {
       // if 'selectize' enabled it is expected to be selectized control
-      if (JSONEditor.plugins.selectize.enable) {
-        return 'arraySelectize';
-      }
-      // otherwise it is select
-      else {
-        return 'multiselect';
-      }
+      if (schema.format === "selectize") return 'arraySelectize';
+      else if (schema.format === "select2") return 'arraySelect2';
+      else return 'multiselect'; // otherwise it is select
     }
   }
 });
@@ -473,7 +497,80 @@ JSONEditor.defaults.resolvers.unshift(function(schema) {
 });
 // Enable custom editor type
 JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if (schema.type === "button") return "button";
+});
+
+JSONEditor.defaults.resolvers.unshift(function(schema) {
   if (schema.type === "string" && schema.format === "uuid") return "uuid";
+});
+
+JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if (schema.type === "string" && schema.format === "autocomplete") return "autocomplete";
+});
+
+JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if (schema.type === "string" && schema.format === "jodit") return "jodit";
+});
+
+JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if(schema.type === "string" && schema.format === 'markdown') return "simplemde";
+});
+
+JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if(schema.type === "string" && ['xhtml', 'bbcode'].indexOf(schema.format) !== -1) return "sceditor";
+});
+
+JSONEditor.defaults.resolvers.unshift(function(schema) {
+  if(schema.type === "string" && ['actionscript',
+      'batchfile',
+      'c',
+      'c++',
+      'cpp',
+      'coffee',
+      'csharp',
+      'css',
+      'dart',
+      'django',
+      'ejs',
+      'erlang',
+      'golang',
+      'groovy',
+      'handlebars',
+      'haskell',
+      'haxe',
+      'html',
+      'ini',
+      'jade',
+      'java',
+      'javascript',
+      'json',
+      'less',
+      'lisp',
+      'lua',
+      'makefile',
+      'matlab',
+      'mysql',
+      'objectivec',
+      'pascal',
+      'perl',
+      'pgsql',
+      'php',
+      'python',
+      'r',
+      'ruby',
+      'sass',
+      'scala',
+      'scss',
+      'smarty',
+      'sql',
+      'sqlserver',
+      'stylus',
+      'svg',
+      'twig',
+      'vbscript',
+      'xml',
+      'yaml'
+    ].indexOf(schema.format)  !== -1) return "ace";
 });
 JSONEditor.defaults.resolvers.unshift(function(schema) {
   if (schema.type === "string" && ['ip', 'ipv4', 'ipv6'].indexOf(schema.format) !== -1 ) return "ip";

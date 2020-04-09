@@ -1,10 +1,9 @@
-// select.js ↓
 JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
   setValue: function(value,initial) {
-    value = this.typecast(value||'');
 
     // Sanitize value before setting it
-    var sanitized = value;
+    var sanitized = this.typecast(value || '');
+
     if(this.enum_values.indexOf(sanitized) < 0) {
       sanitized = this.enum_values[0];
     }
@@ -46,14 +45,14 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     return Math.min(12,Math.max(longest_text/7,2));
   },
   typecast: function(value) {
-    if(this.schema.type === "boolean") {
+    if (this.schema.type === "boolean") {
       return !!value;
     }
-    else if(this.schema.type === "number") {
-      return 1*value;
+    else if (this.schema.type === "number") {
+      return 1*value || 0;
     }
-    else if(this.schema.type === "integer") {
-      return Math.floor(value*1);
+    else if (this.schema.type === "integer") {
+      return Math.floor(value*1 || 0);
     }
     else {
       return ""+value;
@@ -194,10 +193,21 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.container.appendChild(this.control);
 
     // this.value = this.enum_values[0];
-    //设置初始状态
+    // 设置初始状态
     this.initstatus(this.label);
-    //监听checkbox
+    // 监听checkbox
     this.checkListener();
+
+    // Any special formatting that needs to happen after the input is added to the dom
+    
+    window.requestAnimationFrame(function() {
+      if(self.input.parentNode) self.afterInputReady();
+    });
+    
+  },
+  afterInputReady: function() {
+    var self = this;
+    self.theme.afterInputReady(self.input);
   },
   onInputChange: function() {
     var val = this.typecast(this.input.value);
@@ -257,13 +267,14 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
     this.setupSelect2();
   },
   onWatchedFieldChange: function() {
-    var self = this, vars, j;
+    var self = this, vars, j, update = false;
+    var select_options = [], select_titles = [];
 
     // If this editor uses a dynamic select box
     if(this.enumSource) {
       vars = this.getWatchedFieldValues();
-      var select_options = [];
-      var select_titles = [];
+      // var select_options = [];
+      // var select_titles = [];
 
       for(var i=0; i<this.enumSource.length; i++) {
         // Constant values
@@ -469,4 +480,4 @@ JSONEditor.defaults.editors.select = JSONEditor.AbstractEditor.extend({
       }
   }
 });
-// select.js ↑
+
