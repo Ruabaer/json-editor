@@ -207,7 +207,7 @@ JSONEditor.AbstractTheme = Class.extend({
     var el = document.createElement('div');
     el.classList.add('form-control');
     if(label) el.appendChild(label);
-    if(input.type === 'checkbox' && label) {
+    if((input.type === 'checkbox' || input.type === 'radio') && label) {
       
       var uuid=this.GenNonDuplicateID();
       input.id=uuid;
@@ -222,6 +222,7 @@ JSONEditor.AbstractTheme = Class.extend({
       label.style.userSelect='none';
       input.style.display='none';
       el.insertBefore(input, el.firstChild);
+      input.style.width = 'auto';
       // label.insertBefore(input,label.firstChild);
       if(infoText) label.appendChild(infoText);
     }
